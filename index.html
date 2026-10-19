@@ -477,17 +477,19 @@
           paperFullscreen.setAttribute('aria-hidden', 'true');
           restorePaperToEnvelope();
           control.classList.add('is-returning');
-          // Lock the initial raised position for one frame, then settle it to its normal open position.
-          letterPaper.style.transform = 'translateY(-550px) rotate(0deg) scale(1)';
-          letterPaper.style.transition = 'none';
+          // The CSS return state positions this same paper at the raised target.
+          // Keep that frame stable before transitioning it down to the normal position.
           letterPaper.getBoundingClientRect();
           isPaperFullscreen = false;
           document.body.style.overflow = previousBodyOverflow;
 
           requestAnimationFrame(() => {
+            // Remove the no-transition return state, then animate from the raised
+            // position into the normal open-envelope position using CSS alone.
+            letterPaper.style.transition = '';
+            letterPaper.getBoundingClientRect();
             control.classList.remove('is-returning');
             control.classList.add('is-settling');
-            letterPaper.style.transition = '';
             window.setTimeout(() => {
               control.classList.remove('is-settling');
               letterPaper.style.transform = '';
