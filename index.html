@@ -95,6 +95,13 @@
       transform: translateY(-250px) rotate(0deg) scale(1);
       transition-delay: 130ms;
     }
+    /* During fullscreen close, the real paper travels to a higher position
+       behind the overlay. After the overlay arrives, it settles back down. */
+    .envelope-control.is-open.is-returning .letter-paper {
+      transform: translateY(-550px) rotate(0deg) scale(1);
+      transition: transform 790ms cubic-bezier(.22, 1, .36, 1);
+      transition-delay: 0ms;
+    }
     .envelope-control.is-open .letter-shadow { opacity: .36; }
     .envelope-control.is-open .back-flap {
       opacity: 1;
@@ -425,27 +432,32 @@
         fullscreenAnimating = true;
         fullscreenClose.style.pointerEvents = 'none';
 
-        // Target the actual sheet location in the open envelope.
+        // The sheet's normal open position is translateY(-250px).
+        // First send it 300px higher, toward the envelope opening.
         const paperRect = paperSurface.getBoundingClientRect();
-        setPaperReturnTransform(paperRect);
+        control.classList.add('is-returning');
+        const raisedPaperRect = {
+          left: paperRect.left,
+          top: paperRect.top - 300,
+          width: paperRect.width,
+          height: paperRect.height
+        };
+        setPaperReturnTransform(raisedPaperRect);
 
-        // Stage 1: lift the sheet just a little, rather than sending it off-screen.
-        paperFullscreen.classList.remove('is-fullscreen');
-        paperFullscreen.classList.add('is-closing-lift');
+        // Stage 1: shrink/move the fullscreen page to the raised paper position
+        // above the envelope. The real paper moves behind it, remaining covered.
+        paperFullscreen.classList.remove('is-fullscreen', 'is-closing-lift');
 
         window.setTimeout(() => {
-          // Stage 2: travel back to the exact paper position above the envelope.
-          // The envelope remains open; this is not a flap-closing animation.
-          paperFullscreen.classList.remove('is-closing-lift');
-
-          window.setTimeout(() => {
-            paperFullscreen.style.display = 'none';
-            paperFullscreen.setAttribute('aria-hidden', 'true');
-            isPaperFullscreen = false;
-            document.body.style.overflow = previousBodyOverflow;
-            fullscreenAnimating = false;
-          }, 790);
-        }, 300);
+          // Stage 2: reveal the sheet at that raised position, then let the
+          // real paper automatically settle down to its normal open position.
+          paperFullscreen.style.display = 'none';
+          paperFullscreen.setAttribute('aria-hidden', 'true');
+          isPaperFullscreen = false;
+          document.body.style.overflow = previousBodyOverflow;
+          control.classList.remove('is-returning');
+          fullscreenAnimating = false;
+        }, 800);
       }
 
       // The paper is a separate interaction: tapping it must not close the envelope.
