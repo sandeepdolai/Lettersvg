@@ -201,7 +201,7 @@
     <button class="envelope-control" id="letter-control" type="button" aria-expanded="false" aria-label="Open the love letter">
       <svg id="envelope-art" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 920" role="img" aria-labelledby="art-title art-desc">
         <title id="art-title">A little love letter</title>
-        <desc id="art-desc">A red and pink envelope. Tap it to open the flap and lift a handwritten note with two hearts and a sweet message.</desc>
+        <desc id="art-desc">A red envelope with a blank sheet of paper tucked inside. Tap to open it.</desc>
         <defs>
           <linearGradient id="env-body" x1="0" y1="0" x2="1" y2="1">
             <stop offset="0" stop-color="#f15b70"/>
@@ -292,23 +292,7 @@
                 fill="url(#paper)" stroke="#292122" stroke-width="3.2" stroke-linejoin="round" filter="url(#paper-grain)"/>
           <path d="M231 143 Q232 137 240 137 L657 137" fill="none" stroke="#fff" stroke-opacity=".74" stroke-width="2"/>
 
-          <!-- Original handwritten love-letter design. -->
-          <g transform="translate(300 187) rotate(-12) scale(1.3)">
-            <path d="M0 18 C-9 8 -31 -5 -27 -23 C-23 -42 0 -42 5 -22 C13 -44 39 -36 39 -16 C39 2 16 19 5 31Z"
-                  fill="#f6a4b7" stroke="#292122" stroke-width="2.7" stroke-linejoin="round"/>
-          </g>
-          <g transform="translate(385 212) rotate(9) scale(.77)">
-            <path d="M0 13 C-6 7 -22 -3 -19 -16 C-16 -30 1 -30 4 -15 C10 -31 29 -26 29 -11 C29 2 12 14 4 23Z"
-                  fill="#f6a4b7" stroke="#292122" stroke-width="3" stroke-linejoin="round"/>
-          </g>
-
-          <g class="message" fill="#292122" text-anchor="middle" font-family="'Patrick Hand','Comic Sans MS',cursive" font-size="34" letter-spacing=".5">
-            <text x="450" y="278">I will stop loving you</text>
-            <text x="450" y="326">when an apple grows</text>
-            <text x="450" y="374">from a mango tree on</text>
-            <text x="450" y="422">the 30th of February.</text>
-          </g>
-          <text x="450" y="470" text-anchor="middle" fill="#423637" font-family="'Caveat','Patrick Hand',cursive" font-size="27" letter-spacing="1.1">selfcarexpress</text>
+          <!-- Blank letter paper: no message, hearts, or signature. -->
 
         </g>
         </g>
@@ -355,8 +339,8 @@
         control.setAttribute('aria-label', isOpen ? 'Close the envelope' : 'Open the love letter');
         hintText.textContent = isOpen ? 'Tap the envelope to close' : 'Tap the envelope to open';
         artDesc.textContent = isOpen
-          ? 'The envelope is open and the handwritten love note with hearts is visible. Tap to close it.'
-          : 'A red and pink envelope. Tap the top flap to open it and reveal the handwritten love note.';
+          ? 'The envelope is open and a blank sheet of paper is visible. Tap to close it.'
+          : 'A red envelope. Tap the top flap to open it and reveal a blank sheet of paper.';
       }
 
       control.addEventListener('click', toggleLetter);
