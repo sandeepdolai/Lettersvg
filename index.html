@@ -164,32 +164,28 @@
       transform-origin: top left;
       transform: translate3d(var(--paper-x, 0px), var(--paper-y, 0px), 0)
         scale(var(--paper-scale-x, 1), var(--paper-scale-y, 1));
-      clip-path: polygon(0% 0%, 100% 0%, 100% 69%, 82% 100%, 18% 100%, 0% 69%);
       transition:
         transform 760ms cubic-bezier(.22, 1, .36, 1),
-        clip-path 760ms cubic-bezier(.22, 1, .36, 1),
         border-radius 650ms cubic-bezier(.22, 1, .36, 1),
         border-color 420ms ease,
         box-shadow 520ms ease;
-      will-change: transform, clip-path;
+      will-change: transform;
       cursor: default;
     }
     .paper-fullscreen.is-fullscreen .fullscreen-sheet {
       transform: translate3d(0, 0, 0) scale(1, 1);
-      clip-path: polygon(0% 0%, 100% 0%, 100% 69%, 100% 100%, 0% 100%, 0% 69%);
       border-radius: 0;
       border-color: transparent;
       box-shadow: none;
     }
-    /* On close, the paper travels upward out of the foreground,
-       revealing the open envelope underneath instead of shrinking through it. */
-    .paper-fullscreen.is-closing-up .fullscreen-sheet {
-      transform: translate3d(0, -110vh, 0) scale(.96, .96);
-      border-radius: 12px;
+    /* First lift; then travel back to the paper's real position on the open envelope. */
+    .paper-fullscreen.is-closing-lift .fullscreen-sheet {
+      transform: translate3d(0, -7vh, 0) scale(.985, .985);
+      border-radius: 10px;
       border-color: #d8c8c1;
       box-shadow: 0 10px 30px rgba(59, 8, 8, .16);
     }
-    .paper-fullscreen.is-closing-up .paper-fullscreen-close {
+    .paper-fullscreen.is-closing-lift .paper-fullscreen-close {
       opacity: 0;
       transform: translateY(-5px);
       transition-delay: 0ms;
@@ -408,7 +404,7 @@
         document.body.style.overflow = 'hidden';
         paperFullscreen.style.display = 'block';
         paperFullscreen.setAttribute('aria-hidden', 'false');
-        paperFullscreen.classList.remove('is-fullscreen');
+        paperFullscreen.classList.remove('is-fullscreen', 'is-closing-lift');
         setPaperReturnTransform(paperRect);
         fullscreenClose.style.pointerEvents = 'none';
 
@@ -429,19 +425,27 @@
         fullscreenAnimating = true;
         fullscreenClose.style.pointerEvents = 'none';
 
-        // Slide the whole sheet upward out of view. This reveals the open
-        // envelope underneath; the paper does not shrink straight through it.
+        // Target the actual sheet location in the open envelope.
+        const paperRect = paperSurface.getBoundingClientRect();
+        setPaperReturnTransform(paperRect);
+
+        // Stage 1: lift the sheet just a little, rather than sending it off-screen.
         paperFullscreen.classList.remove('is-fullscreen');
-        paperFullscreen.classList.add('is-closing-up');
+        paperFullscreen.classList.add('is-closing-lift');
 
         window.setTimeout(() => {
-          paperFullscreen.style.display = 'none';
-          paperFullscreen.setAttribute('aria-hidden', 'true');
-          paperFullscreen.classList.remove('is-closing-up');
-          isPaperFullscreen = false;
-          document.body.style.overflow = previousBodyOverflow;
-          fullscreenAnimating = false;
-        }, 790);
+          // Stage 2: travel back to the exact paper position above the envelope.
+          // The envelope remains open; this is not a flap-closing animation.
+          paperFullscreen.classList.remove('is-closing-lift');
+
+          window.setTimeout(() => {
+            paperFullscreen.style.display = 'none';
+            paperFullscreen.setAttribute('aria-hidden', 'true');
+            isPaperFullscreen = false;
+            document.body.style.overflow = previousBodyOverflow;
+            fullscreenAnimating = false;
+          }, 790);
+        }, 300);
       }
 
       // The paper is a separate interaction: tapping it must not close the envelope.
