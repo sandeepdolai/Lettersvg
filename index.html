@@ -164,12 +164,42 @@
       z-index: 0;
       inset: 0;
       background: #ffffff;
-      opacity: 1;
+      opacity: 0;
       transition: opacity 820ms cubic-bezier(.22, 1, .36, 1);
       will-change: opacity;
       pointer-events: none;
     }
+    .paper-fullscreen.is-fullscreen .paper-fullscreen-backdrop {
+      opacity: 1;
+      transition: opacity 600ms cubic-bezier(.22, 1, .36, 1);
+    }
     .paper-fullscreen.is-closing .paper-fullscreen-backdrop { opacity: 0; }
+
+    /* The original paper changes to pure white late in the opening move.
+       Keep the actual SVG sheet and fade away its edge and shadow, never clone it. */
+    #paper stop { transition: stop-color 400ms ease; }
+    #paper-surface { transition: stroke-opacity 400ms ease; }
+    .paper-edge-highlight { transition: stroke-opacity 400ms ease; }
+    .letter-paper.is-in-fullscreen .letter-shadow {
+      opacity: .36;
+      transition: opacity 400ms ease;
+    }
+    body.paper-is-white #paper stop {
+      stop-color: #ffffff;
+      transition: stop-color 400ms ease 350ms;
+    }
+    body.paper-is-white #paper-surface {
+      stroke-opacity: 0;
+      transition: stroke-opacity 400ms ease 350ms;
+    }
+    body.paper-is-white .paper-edge-highlight {
+      stroke-opacity: 0;
+      transition: stroke-opacity 400ms ease 350ms;
+    }
+    body.paper-is-white .letter-paper.is-in-fullscreen .letter-shadow {
+      opacity: 0;
+      transition: opacity 400ms ease 350ms;
+    }
     .fullscreen-art {
       position: absolute;
       z-index: 1;
@@ -218,12 +248,18 @@
       -webkit-backdrop-filter: blur(12px);
       backdrop-filter: blur(12px);
       cursor: pointer;
-      opacity: 1;
+      opacity: 0;
       transform: none;
+      visibility: hidden;
+      pointer-events: none;
+      -webkit-tap-highlight-color: transparent;
+      transition: opacity 180ms ease, visibility 0s 180ms, background-color 160ms ease, box-shadow 160ms ease;
+    }
+    .paper-fullscreen-close.is-visible {
+      opacity: 1;
       visibility: visible;
       pointer-events: auto;
-      -webkit-tap-highlight-color: transparent;
-      transition: background-color 160ms ease, box-shadow 160ms ease;
+      transition: opacity 180ms ease, visibility 0s, background-color 160ms ease, box-shadow 160ms ease;
     }
     /* Keep the control outside the fullscreen SVG stacking context and above
        the paper layer on mobile browsers as well as desktop browsers. */
@@ -467,17 +503,17 @@
         // no grain, border, highlight, shadow, text, or photo elements. Removing SVG
         // filters also avoids expensive filter rendering during transforms on mobile.
         fullscreenArt.replaceChildren();
-        paperSurface.setAttribute('fill', '#ffffff');
+        document.body.classList.add('paper-is-white');
         paperSurface.setAttribute('filter', 'none');
-        paperSurface.setAttribute('stroke', 'none');
         letterShadow.setAttribute('filter', 'none');
-        letterShadow.style.opacity = '0';
       }
 
       function restorePaperResourcesToEnvelope() {
+        document.body.classList.remove('paper-is-white');
         paperSurface.setAttribute('fill', originalPaperFill);
         paperSurface.setAttribute('filter', originalPaperFilter);
         paperSurface.setAttribute('stroke', originalPaperStroke);
+        paperSurface.removeAttribute('stroke-opacity');
         letterShadow.setAttribute('filter', originalShadowFilter);
         letterShadow.style.opacity = '';
         // The original SVG definitions remain in the envelope's parent SVG.
@@ -590,9 +626,7 @@
         paperFullscreen.setAttribute('aria-hidden', 'false');
         document.body.classList.add('is-paper-fullscreen');
         fullscreenClose.style.display = 'grid';
-        fullscreenClose.style.visibility = 'visible';
-        fullscreenClose.style.opacity = '1';
-        fullscreenClose.style.pointerEvents = 'auto';
+        fullscreenClose.classList.add('is-visible');
 
         // Reparent the original paper node. The explicit animation below guarantees
         // a visible transition from its current envelope position to fullscreen.
@@ -612,7 +646,7 @@
       function closePaperFullscreen() {
         if (!isPaperFullscreen || fullscreenAnimating || !normalPaperRect || !paperLocalBox) return;
         fullscreenAnimating = true;
-        fullscreenClose.style.pointerEvents = 'none';
+        fullscreenClose.classList.remove('is-visible');
 
         // Capture the in-flight visual position before cancelling an opening animation.
         const currentPaperRect = paperSurface.getBoundingClientRect();
@@ -638,7 +672,7 @@
           paperFullscreen.setAttribute('aria-hidden', 'true');
           document.body.classList.remove('is-paper-fullscreen');
           fullscreenClose.style.display = '';
-          fullscreenClose.style.pointerEvents = 'auto';
+          fullscreenClose.classList.remove('is-visible');
           restorePaperToEnvelope();
           control.classList.add('is-returning');
           letterPaper.getBoundingClientRect();
