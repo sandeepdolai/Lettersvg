@@ -370,6 +370,10 @@
 
       const paperSurface = document.getElementById('paper-surface');
       const letterPaper = document.getElementById('letter-paper');
+      const letterShadow = letterPaper.querySelector('.letter-shadow');
+      const originalPaperFill = paperSurface.getAttribute('fill');
+      const originalPaperFilter = paperSurface.getAttribute('filter');
+      const originalShadowFilter = letterShadow.getAttribute('filter');
       const paperFullscreen = document.getElementById('paper-fullscreen');
       const fullscreenArt = document.getElementById('fullscreen-art');
       const fullscreenClose = document.getElementById('paper-fullscreen-close');
@@ -385,6 +389,38 @@
         const w = window.innerWidth || document.documentElement.clientWidth;
         const h = window.innerHeight || document.documentElement.clientHeight;
         fullscreenArt.setAttribute('viewBox', `0 0 ${w} ${h}`);
+      }
+
+      function preparePaperResourcesForFullscreen() {
+        const svgNS = 'http://www.w3.org/2000/svg';
+        const defs = document.createElementNS(svgNS, 'defs');
+        const resources = [
+          ['paper', 'fullscreen-paper-gradient'],
+          ['grain', 'fullscreen-paper-grain'],
+          ['paper-shadow', 'fullscreen-paper-shadow']
+        ];
+
+        resources.forEach(([sourceId, fullscreenId]) => {
+          const source = document.getElementById(sourceId);
+          if (!source) throw new Error('Missing SVG resource: ' + sourceId);
+          const copy = source.cloneNode(true);
+          copy.setAttribute('id', fullscreenId);
+          defs.appendChild(copy);
+        });
+
+        // These preserve the exact existing color, grain and shadow on the real sheet.
+        fullscreenArt.replaceChildren(defs);
+        paperSurface.setAttribute('fill', 'url(#fullscreen-paper-gradient)');
+        paperSurface.setAttribute('filter', 'url(#fullscreen-paper-grain)');
+        letterShadow.setAttribute('filter', 'url(#fullscreen-paper-shadow)');
+      }
+
+      function restorePaperResourcesToEnvelope() {
+        paperSurface.setAttribute('fill', originalPaperFill);
+        paperSurface.setAttribute('filter', originalPaperFilter);
+        letterShadow.setAttribute('filter', originalShadowFilter);
+        // The paper is already back in the original SVG, where its original defs live.
+        fullscreenArt.replaceChildren();
       }
 
       function matrixForRect(rect, box) {
@@ -412,6 +448,7 @@
         } else {
           paperHomeParent.appendChild(letterPaper);
         }
+        restorePaperResourcesToEnvelope();
       }
 
       function openPaperFullscreen() {
@@ -431,7 +468,9 @@
         paperFullscreen.setAttribute('aria-hidden', 'false');
         fullscreenClose.style.pointerEvents = 'none';
 
-        // Move the original paper into the viewport SVG. No second paper is created.
+        // Move the original paper node into the viewport SVG. No second sheet is created.
+        // Copy only its referenced paint/filter definitions so its appearance never disappears.
+        preparePaperResourcesForFullscreen();
         letterPaper.classList.add('is-in-fullscreen');
         letterPaper.style.transition = 'none';
         setPaperTransformForRect(normalPaperRect);
