@@ -510,15 +510,33 @@
         restorePaperResourcesToEnvelope();
       }
 
-      function openPaperFullscreen() {
+      async function openPaperFullscreen() {
         if (!control.classList.contains('is-open') || isPaperFullscreen || fullscreenAnimating) return;
+        fullscreenAnimating = true;
+
+        // If the user taps while the envelope's opening motion is still running,
+        // finish that transition first so the fullscreen and return targets are measured
+        // from the stable open position rather than an in-between frame.
+        if (typeof letterPaper.getAnimations === 'function') {
+          const activePaperMotions = letterPaper.getAnimations().map((animation) =>
+            animation.finished.catch(() => {})
+          );
+          if (activePaperMotions.length) await Promise.all(activePaperMotions);
+        }
+        if (!control.classList.contains('is-open') || isPaperFullscreen) {
+          fullscreenAnimating = false;
+          return;
+        }
+
         normalPaperRect = paperSurface.getBoundingClientRect();
         paperLocalBox = letterPaper.getBBox();
-        if (!normalPaperRect.width || !normalPaperRect.height || !paperLocalBox.width || !paperLocalBox.height) return;
+        if (!normalPaperRect.width || !normalPaperRect.height || !paperLocalBox.width || !paperLocalBox.height) {
+          fullscreenAnimating = false;
+          return;
+        }
 
         paperHomeParent = letterPaper.parentNode;
         paperHomeNextSibling = letterPaper.nextSibling;
-        fullscreenAnimating = true;
         isPaperFullscreen = true;
         previousBodyOverflow = document.body.style.overflow;
         document.body.style.overflow = 'hidden';
@@ -544,6 +562,10 @@
             paperFullscreen.classList.add('is-fullscreen');
             fullscreenClose.style.pointerEvents = 'auto';
             window.setTimeout(() => {
+              // If the viewport rotated during the opening animation, finish on the
+              // correct contained rectangle for the new dimensions.
+              updateFullscreenViewBox();
+              setPaperTransformForRect(getContainedFullscreenRect());
               fullscreenAnimating = false;
               fullscreenClose.focus({ preventScroll: true });
             }, 850);
