@@ -201,28 +201,34 @@
       transition-delay: 0ms !important;
     }
     .paper-fullscreen-close {
-      position: absolute;
-      z-index: 10;
+      position: fixed;
+      z-index: 2147483647;
       top: max(16px, env(safe-area-inset-top));
       right: max(16px, env(safe-area-inset-right));
       width: 36px;
       height: 36px;
-      display: grid;
+      display: none;
       place-items: center;
       padding: 0;
-      border: 1px solid rgba(60, 60, 67, .14);
+      border: 1px solid rgba(60, 60, 67, .22);
       border-radius: 50%;
-      background: rgba(248, 248, 250, .92);
+      background: rgba(248, 248, 250, .96);
       color: #1c1c1e;
-      box-shadow: 0 1px 4px rgba(0, 0, 0, .08);
+      box-shadow: 0 1px 5px rgba(0, 0, 0, .12);
       -webkit-backdrop-filter: blur(12px);
       backdrop-filter: blur(12px);
       cursor: pointer;
       opacity: 1;
       transform: none;
       visibility: visible;
+      pointer-events: auto;
       -webkit-tap-highlight-color: transparent;
       transition: background-color 160ms ease, box-shadow 160ms ease;
+    }
+    /* Keep the control outside the fullscreen SVG stacking context and above
+       the paper layer on mobile browsers as well as desktop browsers. */
+    body.is-paper-fullscreen .paper-fullscreen-close {
+      display: grid !important;
     }
     .paper-fullscreen-close svg {
       display: block;
@@ -373,12 +379,12 @@
   <div class="paper-fullscreen" id="paper-fullscreen" aria-hidden="true">
     <div class="paper-fullscreen-backdrop" aria-hidden="true"></div>
     <svg class="fullscreen-art" id="fullscreen-art" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 390 844" preserveAspectRatio="none" aria-label="The same blank letter paper expanded to full screen"></svg>
-    <button class="paper-fullscreen-close" id="paper-fullscreen-close" type="button" aria-label="Return to the envelope" title="Back to envelope">
-      <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" focusable="false">
-        <path d="M5 5L15 15M15 5L5 15" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
-      </svg>
-    </button>
   </div>
+  <button class="paper-fullscreen-close" id="paper-fullscreen-close" type="button" aria-label="Return to the envelope" title="Back to envelope">
+    <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" focusable="false">
+      <path d="M5 5L15 15M15 5L5 15" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+    </svg>
+  </button>
   <script>
     (() => {
       const control = document.getElementById('letter-control');
@@ -535,6 +541,10 @@
         paperFullscreen.classList.remove('is-fullscreen', 'is-closing');
         paperFullscreen.style.display = 'block';
         paperFullscreen.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('is-paper-fullscreen');
+        fullscreenClose.style.display = 'grid';
+        fullscreenClose.style.visibility = 'visible';
+        fullscreenClose.style.opacity = '1';
         fullscreenClose.style.pointerEvents = 'none';
 
         // Move the original paper node into the viewport SVG. No second sheet is created.
@@ -577,6 +587,8 @@
           paperFullscreen.classList.remove('is-fullscreen', 'is-closing');
           paperFullscreen.style.display = 'none';
           paperFullscreen.setAttribute('aria-hidden', 'true');
+          document.body.classList.remove('is-paper-fullscreen');
+          fullscreenClose.style.pointerEvents = 'auto';
           restorePaperToEnvelope();
           control.classList.add('is-returning');
           // The CSS return state positions this same paper at the raised target.
