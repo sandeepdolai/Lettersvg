@@ -138,6 +138,73 @@
       0%, 100% { box-shadow: 0 0 0 3px rgba(213, 12, 9, .09); }
       50% { box-shadow: 0 0 0 6px rgba(213, 12, 9, .035); }
     }
+    /* The blank sheet expands into a distraction-free, full-screen page. */
+    .paper-fullscreen {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      overflow: hidden;
+      pointer-events: auto;
+      touch-action: manipulation;
+    }
+    .fullscreen-sheet {
+      position: absolute;
+      box-sizing: border-box;
+      background: linear-gradient(125deg, #fffdfa 0%, #fffaf5 66%, #f8eee8 100%);
+      border: 1px solid #d8c8c1;
+      border-radius: 8px;
+      box-shadow: 0 8px 24px rgba(59, 8, 8, .15);
+      overflow: hidden;
+      transition:
+        left 700ms cubic-bezier(.22, 1, .36, 1),
+        top 700ms cubic-bezier(.22, 1, .36, 1),
+        width 700ms cubic-bezier(.22, 1, .36, 1),
+        height 700ms cubic-bezier(.22, 1, .36, 1),
+        border-radius 620ms cubic-bezier(.22, 1, .36, 1),
+        border-color 420ms ease,
+        box-shadow 500ms ease;
+      cursor: default;
+    }
+    .paper-fullscreen.is-fullscreen .fullscreen-sheet {
+      border-radius: 0;
+      border-color: transparent;
+      box-shadow: none;
+    }
+    .paper-fullscreen-close {
+      position: absolute;
+      z-index: 2;
+      top: max(14px, env(safe-area-inset-top));
+      right: max(14px, env(safe-area-inset-right));
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      padding: 0 0 3px;
+      border: 1px solid rgba(55, 30, 28, .12);
+      border-radius: 50%;
+      background: rgba(255, 255, 255, .78);
+      color: #3c2825;
+      box-shadow: 0 2px 12px rgba(45, 20, 18, .08);
+      font: 300 30px/1 system-ui, sans-serif;
+      cursor: pointer;
+      opacity: 0;
+      transform: translateY(-5px);
+      transition: opacity 260ms ease 240ms, transform 260ms ease 240ms, background 180ms ease;
+    }
+    .paper-fullscreen.is-fullscreen .paper-fullscreen-close {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .paper-fullscreen-close:focus-visible {
+      outline: 2px solid #a70e0a;
+      outline-offset: 3px;
+    }
+    .letter-paper { cursor: default; }
+    .envelope-control.is-open .letter-paper {
+      cursor: zoom-in;
+      pointer-events: auto;
+    }
     @media (max-width: 560px) {
       main { padding: 8px 4px 16px; }
       .envelope-control { width: 100%; }
@@ -235,9 +302,9 @@
         </g>
 
         <g class="letter-clip" clip-path="url(#letter-clip)">
-          <g class="letter-paper">
+          <g class="letter-paper" id="letter-paper">
             <rect class="letter-shadow" x="365" y="90" width="803" height="690" rx="13" fill="#3b0808" filter="url(#paper-shadow)"/>
-            <rect x="365" y="90" width="803" height="690" rx="13" fill="url(#paper)" stroke="#d8c8c1" stroke-width="2" filter="url(#grain)"/>
+            <rect id="paper-surface" x="365" y="90" width="803" height="690" rx="13" fill="url(#paper)" stroke="#d8c8c1" stroke-width="2" filter="url(#grain)"/>
             <path d="M378 104H1155" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="2"/>
           </g>
         </g>
@@ -264,6 +331,10 @@
       <span id="hint-text">Tap the red flap to open</span>
     </div>
   </main>
+  <div class="paper-fullscreen" id="paper-fullscreen" aria-hidden="true">
+    <div class="fullscreen-sheet" id="fullscreen-sheet" aria-label="Blank letter paper"></div>
+    <button class="paper-fullscreen-close" id="paper-fullscreen-close" type="button" aria-label="Return to the envelope" title="Back to envelope">×</button>
+  </div>
   <script>
     (() => {
       const control = document.getElementById('letter-control');
@@ -285,7 +356,90 @@
         return p.x >= left && p.x <= right;
       }
 
+      const paperSurface = document.getElementById('paper-surface');
+      const paperFullscreen = document.getElementById('paper-fullscreen');
+      const fullscreenSheet = document.getElementById('fullscreen-sheet');
+      const fullscreenClose = document.getElementById('paper-fullscreen-close');
+      let isPaperFullscreen = false;
+      let fullscreenAnimating = false;
+
+      function openPaperFullscreen() {
+        if (!control.classList.contains('is-open') || isPaperFullscreen || fullscreenAnimating) return;
+        const paperRect = paperSurface.getBoundingClientRect();
+        if (!paperRect.width || !paperRect.height) return;
+
+        fullscreenAnimating = true;
+        isPaperFullscreen = true;
+        paperFullscreen.style.display = 'block';
+        paperFullscreen.setAttribute('aria-hidden', 'false');
+        paperFullscreen.classList.remove('is-fullscreen');
+        fullscreenClose.style.pointerEvents = 'none';
+        fullscreenSheet.style.left = paperRect.left + 'px';
+        fullscreenSheet.style.top = paperRect.top + 'px';
+        fullscreenSheet.style.width = paperRect.width + 'px';
+        fullscreenSheet.style.height = paperRect.height + 'px';
+        // Start from the exact on-screen paper bounds, then expand to the viewport.
+        fullscreenSheet.getBoundingClientRect();
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            paperFullscreen.classList.add('is-fullscreen');
+            fullscreenSheet.style.left = '0px';
+            fullscreenSheet.style.top = '0px';
+            fullscreenSheet.style.width = window.innerWidth + 'px';
+            fullscreenSheet.style.height = window.innerHeight + 'px';
+            fullscreenClose.style.pointerEvents = 'auto';
+            window.setTimeout(() => {
+              fullscreenAnimating = false;
+              fullscreenClose.focus({ preventScroll: true });
+            }, 740);
+          });
+        });
+      }
+
+      function closePaperFullscreen() {
+        if (!isPaperFullscreen || fullscreenAnimating) return;
+        fullscreenAnimating = true;
+        const paperRect = paperSurface.getBoundingClientRect();
+        paperFullscreen.classList.remove('is-fullscreen');
+        fullscreenClose.style.pointerEvents = 'none';
+        fullscreenSheet.style.left = paperRect.left + 'px';
+        fullscreenSheet.style.top = paperRect.top + 'px';
+        fullscreenSheet.style.width = paperRect.width + 'px';
+        fullscreenSheet.style.height = paperRect.height + 'px';
+        window.setTimeout(() => {
+          paperFullscreen.style.display = 'none';
+          paperFullscreen.setAttribute('aria-hidden', 'true');
+          isPaperFullscreen = false;
+          fullscreenAnimating = false;
+        }, 740);
+      }
+
+      // The paper is a separate interaction: tapping it must not close the envelope.
+      paperSurface.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        openPaperFullscreen();
+      });
+      document.getElementById('letter-paper').addEventListener('click', (event) => {
+        if (!control.classList.contains('is-open')) return;
+        event.preventDefault();
+        event.stopPropagation();
+        openPaperFullscreen();
+      });
+      fullscreenClose.addEventListener('click', closePaperFullscreen);
+      paperFullscreen.addEventListener('click', (event) => {
+        if (event.target === paperFullscreen) closePaperFullscreen();
+      });
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && isPaperFullscreen) closePaperFullscreen();
+      });
+
       control.addEventListener('click', (event) => {
+        if (isPaperFullscreen) {
+          event.preventDefault();
+          event.stopPropagation();
+          return;
+        }
         const isOpen = control.classList.contains('is-open');
         // With the envelope closed, only the real triangular flap opens it.
         // Keyboard activation remains available through the accessible button.
@@ -295,9 +449,9 @@
         control.classList.toggle('is-open', nextOpen);
         control.setAttribute('aria-expanded', String(nextOpen));
         control.setAttribute('aria-label', nextOpen ? 'Close the red envelope' : 'Open the red envelope by lifting its flap');
-        hintText.textContent = nextOpen ? 'Tap anywhere to close' : 'Tap the red flap to open';
+        hintText.textContent = nextOpen ? 'Tap the paper to make it full screen' : 'Tap the red flap to open';
         artDesc.textContent = nextOpen
-          ? 'The red envelope is open, revealing a completely blank sheet of paper. Tap to close it.'
+          ? 'The red envelope is open, revealing a blank sheet of paper. Tap the paper to make it full screen.'
           : 'A deep red envelope. Tap its top flap to open it and reveal a completely blank sheet of paper.';
       });
     })();
