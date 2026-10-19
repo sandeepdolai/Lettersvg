@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1536" height="1024" viewBox="0 0 1536 1024" role="img" aria-labelledby="title desc">
+  <title id="title">Red envelope</title>
+  <desc id="desc">A dimensional red envelope with a rounded triangular flap, fold lines, subtle paper grain, and a transparent background.</desc>
+  <defs>
+    <linearGradient id="body" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#bc0603"/><stop offset=".16" stop-color="#df0b08"/><stop offset=".5" stop-color="#d60705"/><stop offset=".84" stop-color="#e20b08"/><stop offset="1" stop-color="#b80503"/>
+    </linearGradient>
+    <linearGradient id="bodyLight" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f20f0a"/><stop offset=".52" stop-color="#d60805"/><stop offset="1" stop-color="#bd0603"/>
+    </linearGradient>
+    <linearGradient id="leftFold" x1="0" y1="0" x2="1" y2=".1">
+      <stop offset="0" stop-color="#b80603"/><stop offset=".65" stop-color="#dc0906"/><stop offset="1" stop-color="#ef1610"/>
+    </linearGradient>
+    <linearGradient id="rightFold" x1="1" y1="0" x2="0" y2=".1">
+      <stop offset="0" stop-color="#b80503"/><stop offset=".65" stop-color="#d80805"/><stop offset="1" stop-color="#ef1610"/>
+    </linearGradient>
+    <linearGradient id="bottom" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f0140d"/><stop offset=".45" stop-color="#df0a06"/><stop offset="1" stop-color="#c00703"/>
+    </linearGradient>
+    <linearGradient id="flap" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f20d09"/><stop offset=".24" stop-color="#ed0b08"/><stop offset=".7" stop-color="#df0805"/><stop offset="1" stop-color="#ca0603"/>
+    </linearGradient>
+    <linearGradient id="rim" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#990000" stop-opacity=".75"/><stop offset=".07" stop-color="#ff342c" stop-opacity=".45"/><stop offset=".5" stop-color="#ff342c" stop-opacity=".12"/><stop offset=".94" stop-color="#ff342c" stop-opacity=".4"/><stop offset="1" stop-color="#7e0000" stop-opacity=".8"/>
+    </linearGradient>
+    <radialGradient id="halo">
+      <stop offset="0" stop-color="#f30a06" stop-opacity=".25"/><stop offset=".58" stop-color="#f10b07" stop-opacity=".18"/><stop offset=".82" stop-color="#dd0704" stop-opacity=".08"/><stop offset="1" stop-color="#dd0704" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="glow" x="-25%" y="-35%" width="150%" height="170%"><feGaussianBlur stdDeviation="34"/></filter>
+    <filter id="shadow" x="-15%" y="-15%" width="130%" height="140%"><feGaussianBlur in="SourceAlpha" stdDeviation="15" result="b"/><feOffset dy="13" result="o"/><feComponentTransfer><feFuncA type="linear" slope=".72"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <filter id="flapShadow" x="-10%" y="-15%" width="120%" height="140%"><feGaussianBlur in="SourceAlpha" stdDeviation="8" result="b"/><feOffset dy="11" result="o"/><feComponentTransfer><feFuncA type="linear" slope=".8"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <filter id="grain" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency=".72" numOctaves="2" seed="13" result="n"/>
+      <feColorMatrix in="n" type="saturate" values="0" result="g"/>
+      <feComponentTransfer in="g" result="a"><feFuncA type="table" tableValues=".015 .10"/></feComponentTransfer>
+      <feBlend in="SourceGraphic" in2="a" mode="soft-light"/>
+    </filter>
+    <clipPath id="clip"><path d="M207 162.5H1329.5Q1340.5 162.5 1340.5 174V869Q1340.5 881 1328.5 881H207.5Q195 881 195 868.5V175Q195 162.5 207 162.5Z"/></clipPath>
+    <path id="shape" d="M207 162.5H1329.5Q1340.5 162.5 1340.5 174V869Q1340.5 881 1328.5 881H207.5Q195 881 195 868.5V175Q195 162.5 207 162.5Z"/>
+    <path id="flapShape" d="M198 163H1335.5C1331 199 1318 231 1291 253L815 649C798 663 780 663 762 650L238 251C215 232 204 198 198 163Z"/>
+  </defs>
+  <rect width="1536" height="1024" fill="url(#halo)"/>
+  <use href="#shape" fill="#f10b07" opacity=".36" filter="url(#glow)"/>
+  <g filter="url(#shadow)"><use href="#shape" fill="url(#body)"/><use href="#shape" fill="url(#bodyLight)" opacity=".5"/></g>
+  <g clip-path="url(#clip)" filter="url(#grain)">
+    <path d="M195 163 570 514 195 881Z" fill="url(#leftFold)"/>
+    <path d="M1341 163 972 514 1341 881Z" fill="url(#rightFold)"/>
+    <path d="M195 881 570 514 767 656Q783 667 800 656L972 514 1341 881Z" fill="url(#bottom)"/>
+    <path d="M196 880 570 514 767 655Q783 666 800 655L972 514 1340 880" fill="none" stroke="#870000" stroke-opacity=".48" stroke-width="3"/>
+    <path d="M201 871 570 519 765 659Q783 672 802 659L972 519 1335 871" fill="none" stroke="#ff2921" stroke-opacity=".18" stroke-width="2"/>
+    <rect x="195" y="162" width="1146" height="720" fill="#720000" opacity=".08"/>
+  </g>
+  <use href="#flapShape" fill="#280000" opacity=".74" transform="translate(0 12)"/>
+  <use href="#flapShape" fill="#950000" opacity=".34" filter="url(#flapShadow)"/>
+  <use href="#flapShape" fill="url(#flap)" filter="url(#grain)"/>
+  <path d="M199 164H1334.5C1329 198 1317 230 1290 252L814 647C798 660 781 661 763 648L239 250C216 231 205 198 199 164Z" fill="none" stroke="url(#rim)" stroke-width="2.2"/>
+  <path d="M200 164H1333" fill="none" stroke="#ff4940" stroke-opacity=".42" stroke-width="2"/>
+  <path d="M202 167C207 199 216 226 240 248L761 647Q782 666 801 652L1291 252C1317 229 1329 200 1333 167" fill="none" stroke="#a50000" stroke-opacity=".44" stroke-width="3"/>
+  <path d="M207 166C214 201 222 226 244 245M1327 166C1320 201 1311 227 1288 246" fill="none" stroke="#ff3129" stroke-opacity=".2" stroke-width="2"/>
+</svg>
