@@ -588,6 +588,7 @@
           paperFullscreen.style.display = 'none';
           paperFullscreen.setAttribute('aria-hidden', 'true');
           document.body.classList.remove('is-paper-fullscreen');
+          fullscreenClose.style.display = '';
           fullscreenClose.style.pointerEvents = 'auto';
           restorePaperToEnvelope();
           control.classList.add('is-returning');
