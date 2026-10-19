@@ -95,6 +95,14 @@
       transform: translateY(-250px) rotate(0deg) scale(1);
       transition-delay: 130ms;
     }
+    /* After the fullscreen sheet returns to the envelope, slide it down
+       into the pocket. The front folds already render above this layer. */
+    .envelope-control.is-open.is-tucking .letter-paper {
+      transform: translateY(520px) rotate(-.35deg) scale(.985);
+      transition: transform 1050ms cubic-bezier(.42, 0, 1, 1);
+      transition-delay: 0ms;
+    }
+    .envelope-control.is-open.is-tucking .letter-shadow { opacity: .22; }
     .envelope-control.is-open .letter-shadow { opacity: .36; }
     .envelope-control.is-open .back-flap {
       opacity: 1;
@@ -164,7 +172,7 @@
       transform-origin: top left;
       transform: translate3d(var(--paper-x, 0px), var(--paper-y, 0px), 0)
         scale(var(--paper-scale-x, 1), var(--paper-scale-y, 1));
-      clip-path: polygon(0% 0%, 100% 0%, 100% 69%, 82% 100%, 18% 100%, 0% 69%);
+      clip-path: inset(0 round 8px);
       transition:
         transform 760ms cubic-bezier(.22, 1, .36, 1),
         clip-path 760ms cubic-bezier(.22, 1, .36, 1),
@@ -176,7 +184,7 @@
     }
     .paper-fullscreen.is-fullscreen .fullscreen-sheet {
       transform: translate3d(0, 0, 0) scale(1, 1);
-      clip-path: polygon(0% 0%, 100% 0%, 100% 69%, 100% 100%, 0% 100%, 0% 69%);
+      clip-path: inset(0);
       border-radius: 0;
       border-color: transparent;
       box-shadow: none;
@@ -418,14 +426,27 @@
         paperFullscreen.classList.remove('is-fullscreen');
         fullscreenClose.style.pointerEvents = 'none';
 
-        // The page narrows into the same sheet silhouette seen in the envelope;
-        // the tapered bottom arrives with the envelope folds instead of snapping.
+        // Stage 1: return the full-screen page to the exact open sheet position.
         window.setTimeout(() => {
           paperFullscreen.style.display = 'none';
           paperFullscreen.setAttribute('aria-hidden', 'true');
           isPaperFullscreen = false;
           document.body.style.overflow = previousBodyOverflow;
-          fullscreenAnimating = false;
+
+          // Stage 2: the real SVG sheet slides down into the envelope pocket.
+          // The front folds sit above the sheet, progressively covering it.
+          control.classList.add('is-tucking');
+          hintText.textContent = 'Sliding letter back into envelope…';
+
+          window.setTimeout(() => {
+            // Stage 3: once the sheet is tucked away, close the envelope flap.
+            control.classList.remove('is-tucking', 'is-open');
+            control.setAttribute('aria-expanded', 'false');
+            control.setAttribute('aria-label', 'Open the red envelope by lifting its flap');
+            hintText.textContent = 'Tap the red flap to open';
+            artDesc.textContent = 'A deep red envelope, now closed with the blank paper tucked inside. Tap its top flap to open it.';
+            fullscreenAnimating = false;
+          }, 1080);
         }, 790);
       }
 
@@ -458,7 +479,7 @@
       });
 
       control.addEventListener('click', (event) => {
-        if (isPaperFullscreen) {
+        if (isPaperFullscreen || fullscreenAnimating || control.classList.contains('is-tucking')) {
           event.preventDefault();
           event.stopPropagation();
           return;
