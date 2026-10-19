@@ -181,6 +181,20 @@
       border-color: transparent;
       box-shadow: none;
     }
+    /* On close, the paper travels upward out of the foreground,
+       revealing the open envelope underneath instead of shrinking through it. */
+    .paper-fullscreen.is-closing-up .fullscreen-sheet {
+      transform: translate3d(0, -110vh, 0) scale(.96, .96);
+      border-radius: 12px;
+      border-color: #d8c8c1;
+      box-shadow: 0 10px 30px rgba(59, 8, 8, .16);
+    }
+    .paper-fullscreen.is-closing-up .paper-fullscreen-close {
+      opacity: 0;
+      transform: translateY(-5px);
+      transition-delay: 0ms;
+      pointer-events: none;
+    }
     .paper-fullscreen-close {
       position: absolute;
       z-index: 2;
@@ -413,16 +427,17 @@
       function closePaperFullscreen() {
         if (!isPaperFullscreen || fullscreenAnimating) return;
         fullscreenAnimating = true;
-        const paperRect = paperSurface.getBoundingClientRect();
-        setPaperReturnTransform(paperRect);
-        paperFullscreen.classList.remove('is-fullscreen');
         fullscreenClose.style.pointerEvents = 'none';
 
-        // The page narrows into the same sheet silhouette seen in the envelope;
-        // the tapered bottom arrives with the envelope folds instead of snapping.
+        // Slide the whole sheet upward out of view. This reveals the open
+        // envelope underneath; the paper does not shrink straight through it.
+        paperFullscreen.classList.remove('is-fullscreen');
+        paperFullscreen.classList.add('is-closing-up');
+
         window.setTimeout(() => {
           paperFullscreen.style.display = 'none';
           paperFullscreen.setAttribute('aria-hidden', 'true');
+          paperFullscreen.classList.remove('is-closing-up');
           isPaperFullscreen = false;
           document.body.style.overflow = previousBodyOverflow;
           fullscreenAnimating = false;
@@ -448,10 +463,14 @@
         event.stopPropagation();
       });
       window.addEventListener('resize', () => {
+        // CSS viewport units keep the upward exit consistent after rotation.
         if (!isPaperFullscreen || fullscreenAnimating) return;
-        // The fullscreen sheet is sized by the viewport; recompute its return
-        // transform so the close animation remains aligned after rotation.
-        setPaperReturnTransform(paperSurface.getBoundingClientRect());
+        if (paperFullscreen.classList.contains('is-fullscreen')) {
+          fullscreenSheet.style.setProperty('--paper-x', '0px');
+          fullscreenSheet.style.setProperty('--paper-y', '0px');
+          fullscreenSheet.style.setProperty('--paper-scale-x', '1');
+          fullscreenSheet.style.setProperty('--paper-scale-y', '1');
+        }
       });
       document.addEventListener('keydown', (event) => {
         if (event.key === 'Escape' && isPaperFullscreen) closePaperFullscreen();
