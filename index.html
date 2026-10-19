@@ -114,37 +114,6 @@
       transition: transform 820ms cubic-bezier(.22, 1, .36, 1), opacity 220ms ease 80ms;
       pointer-events: none;
     }
-    .hint {
-      min-height: 28px;
-      margin-top: clamp(2px, .6vw, 9px);
-      padding-inline: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 9px;
-      color: #8d2022;
-      font-size: clamp(12px, 1.8vw, 15px);
-      font-weight: 600;
-      letter-spacing: .13em;
-      line-height: 1.4;
-      text-align: center;
-      text-transform: uppercase;
-      user-select: none;
-    }
-    .hint-dot {
-      width: 7px;
-      height: 7px;
-      flex: 0 0 7px;
-      border-radius: 50%;
-      background: #d50c09;
-      box-shadow: 0 0 0 4px rgba(213, 12, 9, .1);
-      animation: hint-pulse 2.2s ease-in-out infinite;
-    }
-    .is-open + .hint .hint-dot { animation: none; background: #8d0503; }
-    @keyframes hint-pulse {
-      0%, 100% { box-shadow: 0 0 0 3px rgba(213, 12, 9, .09); }
-      50% { box-shadow: 0 0 0 6px rgba(213, 12, 9, .035); }
-    }
     /* The blank sheet expands into a distraction-free, full-screen page. */
     .paper-fullscreen {
       display: none;
@@ -287,12 +256,10 @@
     @media (max-width: 560px) {
       main { padding: 8px 4px 16px; }
       .envelope-control { width: 100%; }
-      .hint { margin-top: 3px; font-size: 11px; letter-spacing: .1em; }
     }
     @media (max-height: 560px) and (orientation: landscape) {
       main { justify-content: flex-start; padding-top: 0; }
       .envelope-control { max-width: min(94vw, 78vh * 1.5); }
-      .hint { margin-top: -5px; }
     }
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after {
@@ -407,11 +374,7 @@
         </g>
       </svg>
     </button>
-    <div class="hint" id="hint" aria-live="polite">
-      <span class="hint-dot" aria-hidden="true"></span>
-      <span id="hint-text">Tap the red flap to open</span>
-    </div>
-  </main>
+    </main>
   <div class="paper-fullscreen" id="paper-fullscreen" aria-hidden="true">
     <div class="paper-fullscreen-backdrop" aria-hidden="true"></div>
     <svg class="fullscreen-art" id="fullscreen-art" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 390 844" preserveAspectRatio="none" aria-label="The same blank letter paper expanded to full screen"></svg>
@@ -425,7 +388,7 @@
     (() => {
       const control = document.getElementById('letter-control');
       const art = document.getElementById('envelope-art');
-      const hintText = document.getElementById('hint-text');
+
       const artDesc = document.getElementById('art-desc');
 
       function pointIsOnFlap(event) {
@@ -736,7 +699,7 @@
         control.classList.toggle('is-open', nextOpen);
         control.setAttribute('aria-expanded', String(nextOpen));
         control.setAttribute('aria-label', nextOpen ? 'Close the red envelope' : 'Open the red envelope by lifting its flap');
-        hintText.textContent = nextOpen ? 'Tap the paper to make it full screen' : 'Tap the red flap to open';
+
         artDesc.textContent = nextOpen
           ? 'The red envelope is open, revealing a blank sheet of paper. Tap the paper to make it full screen.'
           : 'A deep red envelope. Tap its top flap to open it and reveal a completely blank sheet of paper.';
