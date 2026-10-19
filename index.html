@@ -362,6 +362,7 @@
       const fullscreenClose = document.getElementById('paper-fullscreen-close');
       let isPaperFullscreen = false;
       let fullscreenAnimating = false;
+      let previousBodyOverflow = "";
 
       function openPaperFullscreen() {
         if (!control.classList.contains('is-open') || isPaperFullscreen || fullscreenAnimating) return;
@@ -370,6 +371,8 @@
 
         fullscreenAnimating = true;
         isPaperFullscreen = true;
+        previousBodyOverflow = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
         paperFullscreen.style.display = 'block';
         paperFullscreen.setAttribute('aria-hidden', 'false');
         paperFullscreen.classList.remove('is-fullscreen');
@@ -410,6 +413,7 @@
           paperFullscreen.style.display = 'none';
           paperFullscreen.setAttribute('aria-hidden', 'true');
           isPaperFullscreen = false;
+          document.body.style.overflow = previousBodyOverflow;
           fullscreenAnimating = false;
         }, 740);
       }
@@ -427,8 +431,17 @@
         openPaperFullscreen();
       });
       fullscreenClose.addEventListener('click', closePaperFullscreen);
+      // Touching the blank full-screen page should not dismiss it by accident.
+      // Only the close control or Escape returns to the envelope.
       paperFullscreen.addEventListener('click', (event) => {
-        if (event.target === paperFullscreen) closePaperFullscreen();
+        event.stopPropagation();
+      });
+      window.addEventListener('resize', () => {
+        if (!isPaperFullscreen || fullscreenAnimating) return;
+        fullscreenSheet.style.left = '0px';
+        fullscreenSheet.style.top = '0px';
+        fullscreenSheet.style.width = window.innerWidth + 'px';
+        fullscreenSheet.style.height = window.innerHeight + 'px';
       });
       document.addEventListener('keydown', (event) => {
         if (event.key === 'Escape' && isPaperFullscreen) closePaperFullscreen();
