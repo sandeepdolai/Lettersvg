@@ -152,9 +152,17 @@
       inset: 0;
       z-index: 1000;
       overflow: hidden;
+      background: #fffaf5;
       pointer-events: auto;
       touch-action: manipulation;
     }
+    .fullscreen-extension {
+      opacity: 0;
+      transition: opacity 820ms cubic-bezier(.22, 1, .36, 1);
+      pointer-events: none;
+    }
+    .paper-fullscreen.is-fullscreen .fullscreen-extension { opacity: 1; }
+    .paper-fullscreen.is-closing .fullscreen-extension { opacity: 0; }
     .fullscreen-art {
       position: absolute;
       inset: 0;
@@ -168,7 +176,7 @@
     .letter-paper.is-in-fullscreen {
       transform-box: view-box !important;
       transform-origin: 0 0 !important;
-      transition: transform 820ms cubic-bezier(.22, 1, .36, 1) !important;
+      transition: transform 820ms cubic-bezier(.22, 1, .36, 1);
       cursor: default;
       pointer-events: auto;
       will-change: transform;
@@ -296,7 +304,9 @@
           <!-- Keep the sheet inside the envelope at the bottom during its slide,
                while allowing it to emerge above the back edge as it opens. -->
           <clipPath id="letter-clip">
-            <path d="M207 -300H1329.5Q1340.5 -300 1340.5 -288V869Q1340.5 881 1328.5 881H207.5Q195 881 195 868.5V-288Q195 -300 207 -300Z"/>
+            <!-- Extend above the envelope far enough to keep the full sheet visible
+                 during the raised return position. -->
+            <path d="M207 -650H1329.5Q1340.5 -650 1340.5 -638V869Q1340.5 881 1328.5 881H207.5Q195 881 195 868.5V-638Q195 -650 207 -650Z"/>
           </clipPath>
         </defs>
 
@@ -384,11 +394,47 @@
       let paperHomeNextSibling = null;
       let normalPaperRect = null;
       let paperLocalBox = null;
+      let fullscreenPaperExtension = null;
 
       function updateFullscreenViewBox() {
         const w = window.innerWidth || document.documentElement.clientWidth;
         const h = window.innerHeight || document.documentElement.clientHeight;
         fullscreenArt.setAttribute('viewBox', `0 0 ${w} ${h}`);
+        if (fullscreenPaperExtension) {
+          fullscreenPaperExtension.setAttribute('width', String(w));
+          fullscreenPaperExtension.setAttribute('height', String(h));
+        }
+      }
+
+      // Fit the real sheet inside the viewport using one uniform scale. The
+      // textured extension fills the remaining screen area, so no paper edge
+      // is cropped and the sheet itself is never stretched.
+      function getContainedFullscreenRect() {
+        const w = window.innerWidth || document.documentElement.clientWidth;
+        const h = window.innerHeight || document.documentElement.clientHeight;
+        const scale = Math.min(w / paperLocalBox.width, h / paperLocalBox.height);
+        const width = paperLocalBox.width * scale;
+        const height = paperLocalBox.height * scale;
+        return {
+          left: (w - width) / 2,
+          top: (h - height) / 2,
+          width,
+          height
+        };
+      }
+
+      // The returned sheet's raised position is the CSS translateY(-550px)
+      // state. The open position is translateY(-250px), so convert the
+      // 300-unit difference through the envelope SVG's current screen matrix.
+      function getRaisedPaperRect() {
+        const matrix = art.getScreenCTM();
+        const yScale = matrix ? Math.hypot(matrix.c, matrix.d) : 1;
+        return {
+          left: normalPaperRect.left,
+          top: normalPaperRect.top - 300 * yScale,
+          width: normalPaperRect.width,
+          height: normalPaperRect.height
+        };
       }
 
       function preparePaperResourcesForFullscreen() {
@@ -408,8 +454,19 @@
           defs.appendChild(copy);
         });
 
-        // These preserve the exact existing color, grain and shadow on the real sheet.
-        fullscreenArt.replaceChildren(defs);
+        // This is only a seamless paper-textured extension around the real sheet,
+        // not a second sheet or a replacement for #letter-paper.
+        fullscreenPaperExtension = document.createElementNS(svgNS, 'rect');
+        fullscreenPaperExtension.setAttribute('x', '0');
+        fullscreenPaperExtension.setAttribute('y', '0');
+        fullscreenPaperExtension.setAttribute('width', String(window.innerWidth));
+        fullscreenPaperExtension.setAttribute('height', String(window.innerHeight));
+        fullscreenPaperExtension.setAttribute('fill', '#fffaf5');
+        fullscreenPaperExtension.setAttribute('filter', 'url(#fullscreen-paper-grain)');
+        fullscreenPaperExtension.setAttribute('class', 'fullscreen-extension');
+        fullscreenArt.replaceChildren(defs, fullscreenPaperExtension);
+
+        // These preserve the existing color, grain and shadow on the same real sheet.
         paperSurface.setAttribute('fill', 'url(#fullscreen-paper-gradient)');
         paperSurface.setAttribute('filter', 'url(#fullscreen-paper-grain)');
         letterShadow.setAttribute('filter', 'url(#fullscreen-paper-shadow)');
@@ -421,6 +478,8 @@
         letterShadow.setAttribute('filter', originalShadowFilter);
         // The paper is already back in the original SVG, where its original defs live.
         fullscreenArt.replaceChildren();
+        fullscreenPaperExtension = null;
+        paperFullscreen.classList.remove('is-fullscreen', 'is-closing');
       }
 
       function matrixForRect(rect, box) {
@@ -464,6 +523,7 @@
         previousBodyOverflow = document.body.style.overflow;
         document.body.style.overflow = 'hidden';
         updateFullscreenViewBox();
+        paperFullscreen.classList.remove('is-fullscreen', 'is-closing');
         paperFullscreen.style.display = 'block';
         paperFullscreen.setAttribute('aria-hidden', 'false');
         fullscreenClose.style.pointerEvents = 'none';
@@ -480,13 +540,8 @@
         requestAnimationFrame(() => {
           letterPaper.style.transition = 'transform 820ms cubic-bezier(.22, 1, .36, 1)';
           requestAnimationFrame(() => {
-            const viewportRect = {
-              left: 0,
-              top: 0,
-              width: window.innerWidth,
-              height: window.innerHeight
-            };
-            setPaperTransformForRect(viewportRect);
+            setPaperTransformForRect(getContainedFullscreenRect());
+            paperFullscreen.classList.add('is-fullscreen');
             fullscreenClose.style.pointerEvents = 'auto';
             window.setTimeout(() => {
               fullscreenAnimating = false;
@@ -501,17 +556,15 @@
         fullscreenAnimating = true;
         fullscreenClose.style.pointerEvents = 'none';
 
-        // First, move this SAME sheet upward into the raised position above the envelope.
-        const raisedPaperRect = {
-          left: normalPaperRect.left,
-          top: normalPaperRect.top - 300,
-          width: normalPaperRect.width,
-          height: normalPaperRect.height
-        };
-        setPaperTransformForRect(raisedPaperRect);
+        // Move this SAME sheet upward to the screen-space position that matches
+        // the envelope's raised CSS state. Fade out only the textured extension,
+        // gradually revealing the envelope beneath the moving paper.
+        paperFullscreen.classList.add('is-closing');
+        setPaperTransformForRect(getRaisedPaperRect());
 
         window.setTimeout(() => {
-          // Put the same SVG node back inside the envelope's clipping layer at the raised position.
+          // Put the same SVG node back inside the envelope's clipping layer at the matching raised position.
+          paperFullscreen.classList.remove('is-fullscreen', 'is-closing');
           paperFullscreen.style.display = 'none';
           paperFullscreen.setAttribute('aria-hidden', 'true');
           restorePaperToEnvelope();
@@ -558,14 +611,9 @@
         event.stopPropagation();
       });
       window.addEventListener('resize', () => {
-        if (!isPaperFullscreen || fullscreenAnimating) return;
+        if (!isPaperFullscreen || fullscreenAnimating || !paperLocalBox) return;
         updateFullscreenViewBox();
-        setPaperTransformForRect({
-          left: 0,
-          top: 0,
-          width: window.innerWidth,
-          height: window.innerHeight
-        });
+        setPaperTransformForRect(getContainedFullscreenRect());
       });
       document.addEventListener('keydown', (event) => {
         if (event.key === 'Escape' && isPaperFullscreen) closePaperFullscreen();
