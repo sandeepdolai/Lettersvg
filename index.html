@@ -164,9 +164,10 @@
       transform-origin: top left;
       transform: translate3d(var(--paper-x, 0px), var(--paper-y, 0px), 0)
         scale(var(--paper-scale-x, 1), var(--paper-scale-y, 1));
-      border-radius: 8px;
+      clip-path: polygon(0% 0%, 100% 0%, 100% 69%, 82% 100%, 18% 100%, 0% 69%);
       transition:
         transform 760ms cubic-bezier(.22, 1, .36, 1),
+        clip-path 760ms cubic-bezier(.22, 1, .36, 1),
         border-radius 650ms cubic-bezier(.22, 1, .36, 1),
         border-color 420ms ease,
         box-shadow 520ms ease;
@@ -175,16 +176,10 @@
     }
     .paper-fullscreen.is-fullscreen .fullscreen-sheet {
       transform: translate3d(0, 0, 0) scale(1, 1);
+      clip-path: polygon(0% 0%, 100% 0%, 100% 69%, 100% 100%, 0% 100%, 0% 69%);
       border-radius: 0;
       border-color: transparent;
       box-shadow: none;
-    }
-    /* First lift the full sheet, then send it back to the paper above the open envelope. */
-    .paper-fullscreen.is-closing-lift .fullscreen-sheet {
-      transform: translate3d(0, -9vh, 0) scale(.985, .985);
-      border-radius: 10px;
-      border-color: #d8c8c1;
-      box-shadow: 0 10px 30px rgba(59, 8, 8, .16);
     }
     .paper-fullscreen-close {
       position: absolute;
@@ -418,29 +413,20 @@
       function closePaperFullscreen() {
         if (!isPaperFullscreen || fullscreenAnimating) return;
         fullscreenAnimating = true;
-
-        // The destination is the real paper position in the open envelope.
         const paperRect = paperSurface.getBoundingClientRect();
         setPaperReturnTransform(paperRect);
+        paperFullscreen.classList.remove('is-fullscreen');
         fullscreenClose.style.pointerEvents = 'none';
 
-        // Stage 1: lift the sheet upward, like raising a sheet of paper off a desk.
-        paperFullscreen.classList.remove('is-fullscreen');
-        paperFullscreen.classList.add('is-closing-lift');
-
+        // The page narrows into the same sheet silhouette seen in the envelope;
+        // the tapered bottom arrives with the envelope folds instead of snapping.
         window.setTimeout(() => {
-          // Stage 2: float the lifted sheet back to the paper in the open envelope.
-          paperFullscreen.classList.remove('is-closing-lift');
-
-          window.setTimeout(() => {
-            // Reveal the real SVG paper exactly where the fullscreen sheet lands.
-            paperFullscreen.style.display = 'none';
-            paperFullscreen.setAttribute('aria-hidden', 'true');
-            isPaperFullscreen = false;
-            document.body.style.overflow = previousBodyOverflow;
-            fullscreenAnimating = false;
-          }, 780);
-        }, 360);
+          paperFullscreen.style.display = 'none';
+          paperFullscreen.setAttribute('aria-hidden', 'true');
+          isPaperFullscreen = false;
+          document.body.style.overflow = previousBodyOverflow;
+          fullscreenAnimating = false;
+        }, 790);
       }
 
       // The paper is a separate interaction: tapping it must not close the envelope.
@@ -463,13 +449,9 @@
       });
       window.addEventListener('resize', () => {
         if (!isPaperFullscreen || fullscreenAnimating) return;
+        // The fullscreen sheet is sized by the viewport; recompute its return
+        // transform so the close animation remains aligned after rotation.
         setPaperReturnTransform(paperSurface.getBoundingClientRect());
-        if (paperFullscreen.classList.contains('is-fullscreen')) {
-          fullscreenSheet.style.setProperty('--paper-x', '0px');
-          fullscreenSheet.style.setProperty('--paper-y', '0px');
-          fullscreenSheet.style.setProperty('--paper-scale-x', '1');
-          fullscreenSheet.style.setProperty('--paper-scale-y', '1');
-        }
       });
       document.addEventListener('keydown', (event) => {
         if (event.key === 'Escape' && isPaperFullscreen) closePaperFullscreen();
