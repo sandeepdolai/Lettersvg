@@ -103,7 +103,7 @@
       transform-box: fill-box;
       transform-origin: 50% 100%;
       transform: translateY(314px) scale(.985);
-      transition: transform 920ms cubic-bezier(.18,.86,.24,1.08);
+      transition: transform 900ms cubic-bezier(.22,1,.36,1);
       will-change: transform;
     }
     .letter-shadow {
@@ -126,7 +126,7 @@
       opacity: 1;
       transform: rotateX(180deg);
       transition:
-        transform 850ms cubic-bezier(.18,.76,.23,1),
+        transform 760ms cubic-bezier(.22,1,.36,1),
         opacity 260ms ease 80ms;
     }
     .envelope-control.is-open .letter-paper {
@@ -198,9 +198,9 @@
 </head>
 <body>
   <main>
-    <button class="envelope-control" id="letter-control" type="button" aria-expanded="false" aria-label="Open the love letter">
+    <button class="envelope-control" id="letter-control" type="button" aria-expanded="false" aria-label="Open the envelope">
       <svg id="envelope-art" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 920" role="img" aria-labelledby="art-title art-desc">
-        <title id="art-title">A little love letter</title>
+        <title id="art-title">Open the envelope</title>
         <desc id="art-desc">A red and pink envelope. Tap it to open the flap and lift a handwritten note with two hearts and a sweet message.</desc>
         <defs>
           <linearGradient id="env-body" x1="0" y1="0" x2="1" y2="1">
@@ -292,23 +292,8 @@
                 fill="url(#paper)" stroke="#292122" stroke-width="3.2" stroke-linejoin="round" filter="url(#paper-grain)"/>
           <path d="M231 143 Q232 137 240 137 L657 137" fill="none" stroke="#fff" stroke-opacity=".74" stroke-width="2"/>
 
-          <!-- Hand-drawn hearts. -->
-          <g transform="translate(300 187) rotate(-12) scale(1.3)">
-            <path d="M0 18 C-9 8 -31 -5 -27 -23 C-23 -42 0 -42 5 -22 C13 -44 39 -36 39 -16 C39 2 16 19 5 31Z"
-                  fill="#f6a4b7" stroke="#292122" stroke-width="2.7" stroke-linejoin="round"/>
-          </g>
-          <g transform="translate(385 212) rotate(9) scale(.77)">
-            <path d="M0 13 C-6 7 -22 -3 -19 -16 C-16 -30 1 -30 4 -15 C10 -31 29 -26 29 -11 C29 2 12 14 4 23Z"
-                  fill="#f6a4b7" stroke="#292122" stroke-width="3" stroke-linejoin="round"/>
-          </g>
+          <!-- Blank letter paper: intentionally no message or decoration. -->
 
-          <g class="message" fill="#292122" text-anchor="middle" font-family="'Patrick Hand','Comic Sans MS',cursive" font-size="34" letter-spacing=".5">
-            <text x="450" y="278">I will stop loving you</text>
-            <text x="450" y="326">when an apple grows</text>
-            <text x="450" y="374">from a mango tree on</text>
-            <text x="450" y="422">the 30th of February.</text>
-          </g>
-          <text x="450" y="470" text-anchor="middle" fill="#423637" font-family="'Caveat','Patrick Hand',cursive" font-size="27" letter-spacing="1.1">selfcarexpress</text>
         </g>
         </g>
 
@@ -339,7 +324,7 @@
     </button>
     <div class="hint" id="hint" aria-live="polite">
       <span class="hint-dot" aria-hidden="true"></span>
-      <span id="hint-text">Tap the envelope to open</span>
+      <span id="hint-text">Tap the flap to open</span>
     </div>
   </main>
   <script>
@@ -351,11 +336,11 @@
       function toggleLetter() {
         const isOpen = control.classList.toggle('is-open');
         control.setAttribute('aria-expanded', String(isOpen));
-        control.setAttribute('aria-label', isOpen ? 'Close the love letter' : 'Open the love letter');
-        hintText.textContent = isOpen ? 'Tap the letter to tuck it away' : 'Tap the envelope to open';
+        control.setAttribute('aria-label', isOpen ? 'Close the envelope' : 'Open the love letter');
+        hintText.textContent = isOpen ? 'Tap the envelope to close' : 'Tap the envelope to open';
         artDesc.textContent = isOpen
-          ? 'The envelope is open and the handwritten note is visible. Tap to close it.'
-          : 'A red and pink envelope. Tap it to open the flap and lift a handwritten note with hearts.';
+          ? 'The envelope is open and a blank sheet of paper is visible. Tap to close it.'
+          : 'A red and pink envelope. Tap the top flap to open it and reveal a blank sheet of paper.';
       }
 
       control.addEventListener('click', toggleLetter);
