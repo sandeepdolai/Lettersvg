@@ -97,6 +97,8 @@
         opacity 180ms ease 160ms;
       backface-visibility: hidden;
     }
+    .letter-clip { clip-path: url(#envelope-clip); }
+    .envelope-control.is-open .letter-clip { clip-path: none; }
     .letter-paper {
       transform-box: fill-box;
       transform-origin: 50% 100%;
@@ -281,7 +283,8 @@
           <path d="M191 429 L450 640 L709 429" fill="none" stroke="#f67a8c" stroke-opacity=".42" stroke-width="2"/>
         </g>
 
-        <!-- The note travels upward from inside the envelope. -->
+        <!-- The note is clipped to the envelope while tucked inside. -->
+        <g class="letter-clip" clip-path="url(#envelope-clip)">
         <g class="letter-paper">
           <path class="letter-shadow" d="M224 139 Q225 130 237 131 L662 131 Q674 132 674 144 L674 437 Q674 449 663 458 L450 625 L237 458 Q224 448 224 437Z"
                 fill="#54303a" filter="url(#paper-shadow)"/>
@@ -306,6 +309,7 @@
             <text x="450" y="422">the 30th of February.</text>
           </g>
           <text x="450" y="470" text-anchor="middle" fill="#423637" font-family="'Caveat','Patrick Hand',cursive" font-size="27" letter-spacing="1.1">selfcarexpress</text>
+        </g>
         </g>
 
         <!-- Front folds overlay the lower edge of the paper, just like a real envelope. -->
