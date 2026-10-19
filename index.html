@@ -505,30 +505,26 @@
         restorePaperResourcesToEnvelope();
       }
 
-      async function openPaperFullscreen() {
+      function openPaperFullscreen() {
         if (!control.classList.contains('is-open') || isPaperFullscreen || fullscreenAnimating) return;
         fullscreenAnimating = true;
 
-        // If the user taps while the envelope's opening motion is still running,
-        // finish that transition first so the fullscreen and return targets are measured
-        // from the stable open position rather than an in-between frame.
-        if (typeof letterPaper.getAnimations === 'function') {
-          const activePaperMotions = letterPaper.getAnimations().map((animation) =>
-            animation.finished.catch(() => {})
-          );
-          if (activePaperMotions.length) await Promise.all(activePaperMotions);
-        }
-        if (!control.classList.contains('is-open') || isPaperFullscreen) {
+        // Capture the current on-screen position so opening can begin immediately,
+        // even if the envelope's paper is still finishing its entrance transition.
+        const currentPaperRect = paperSurface.getBoundingClientRect();
+        paperLocalBox = letterPaper.getBBox();
+        if (!currentPaperRect.width || !currentPaperRect.height || !paperLocalBox.width || !paperLocalBox.height) {
           fullscreenAnimating = false;
           return;
         }
 
+        // Measure the final resting position without waiting for the active animation.
+        // These synchronous style changes happen in one task and are never painted.
+        const previousInlineTransform = letterPaper.style.transform;
+        letterPaper.style.transition = 'none';
+        letterPaper.style.transform = 'translateY(-250px) rotate(0deg) scale(1)';
         normalPaperRect = paperSurface.getBoundingClientRect();
-        paperLocalBox = letterPaper.getBBox();
-        if (!normalPaperRect.width || !normalPaperRect.height || !paperLocalBox.width || !paperLocalBox.height) {
-          fullscreenAnimating = false;
-          return;
-        }
+        letterPaper.style.transform = previousInlineTransform;
 
         paperHomeParent = letterPaper.parentNode;
         paperHomeNextSibling = letterPaper.nextSibling;
@@ -546,7 +542,7 @@
         preparePaperResourcesForFullscreen();
         letterPaper.classList.add('is-in-fullscreen');
         letterPaper.style.transition = 'none';
-        setPaperTransformForRect(normalPaperRect);
+        setPaperTransformForRect(currentPaperRect);
         fullscreenArt.appendChild(letterPaper);
         fullscreenArt.getBoundingClientRect();
 
@@ -556,14 +552,12 @@
             setPaperTransformForRect(getContainedFullscreenRect());
             paperFullscreen.classList.add('is-fullscreen');
             fullscreenClose.style.pointerEvents = 'auto';
-            window.setTimeout(() => {
-              // If the viewport rotated during the opening animation, finish on the
-              // correct contained rectangle for the new dimensions.
-              updateFullscreenViewBox();
-              setPaperTransformForRect(getContainedFullscreenRect());
-              fullscreenAnimating = false;
-              fullscreenClose.focus({ preventScroll: true });
-            }, 850);
+
+            // Allow closing as soon as the opening motion starts. A queued timeout
+            // here previously kept the close handler blocked for ~850ms and could
+            // make the controls feel laggy or unresponsive during the transition.
+            fullscreenAnimating = false;
+            fullscreenClose.focus({ preventScroll: true });
           });
         });
       }
