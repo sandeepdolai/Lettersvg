@@ -3,158 +3,125 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#fff0ef">
-  <title>A Little Love Letter</title>
-  <meta name="description" content="Open a little envelope and find a sweet love note.">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Caveat:wght@500;600&display=swap" rel="stylesheet">
+  <meta name="theme-color" content="#fff7f5">
+  <title>A Little Red Letter</title>
+  <meta name="description" content="Open a realistic red envelope and reveal a blank sheet of paper.">
   <style>
     :root {
       color-scheme: light;
-      --ink: #241c1d;
-      --paper: #fff8f2;
-      --blush: #fff0ef;
-      --rose: #f4a0b3;
-      --rose-deep: #dc263f;
+      --blush: #fff7f5;
+      --ink: #241819;
     }
     * { box-sizing: border-box; }
     html { min-height: 100%; background: var(--blush); }
     body {
       margin: 0;
       min-height: 100svh;
+      overflow-x: hidden;
       display: grid;
       place-items: center;
-      overflow-x: hidden;
-      background:
-        radial-gradient(ellipse at 50% 28%, rgba(255,255,255,.54), transparent 58%),
-        var(--blush);
+      background: radial-gradient(ellipse at 50% 35%, #fffdfc 0%, var(--blush) 73%);
       color: var(--ink);
-      font-family: "Patrick Hand", "Trebuchet MS", cursive;
+      font-family: ui-rounded, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
     main {
-      width: min(100%, 850px);
+      width: min(100%, 1080px);
       min-height: 100svh;
-      padding: clamp(10px, 2.4vw, 24px) 16px 22px;
       margin-inline: auto;
+      padding: clamp(12px, 3vw, 30px) 14px 22px;
       display: flex;
       flex-direction: column;
-      align-items: center;
       justify-content: center;
-      gap: 0;
+      align-items: center;
     }
     .envelope-control {
       appearance: none;
       -webkit-appearance: none;
-      border: 0;
-      padding: 0;
-      margin: 0;
-      width: 100%;
-      max-width: 790px;
       display: block;
+      width: 100%;
+      max-width: 1020px;
+      margin: 0;
+      padding: 0;
+      border: 0;
+      border-radius: 12px;
       position: relative;
       background: transparent;
       color: inherit;
       cursor: pointer;
-      perspective: 1200px;
+      perspective: 1400px;
       -webkit-tap-highlight-color: transparent;
       touch-action: manipulation;
       outline: none;
     }
     .envelope-control:focus-visible {
-      outline: 3px solid rgba(203, 39, 62, .72);
-      outline-offset: 5px;
-      border-radius: 28px;
+      outline: 3px solid rgba(192, 6, 3, .65);
+      outline-offset: 4px;
     }
     #envelope-art {
+      display: block;
       width: 100%;
       height: auto;
       overflow: visible;
-      display: block;
-      filter: drop-shadow(0 9px 10px rgba(105, 43, 51, .035));
       transform: translateY(0);
-      transition: transform 650ms cubic-bezier(.2,.7,.25,1);
+      transition: transform 650ms cubic-bezier(.22, 1, .36, 1);
     }
-    .envelope-control:hover #envelope-art {
-      transform: translateY(-3px);
+    .envelope-control:hover #envelope-art { transform: translateY(-2px); }
+    .envelope-control.is-open:hover #envelope-art { transform: translateY(-1px); }
+    .letter-clip { clip-path: url(#envelope-clip); }
+    .envelope-control.is-open .letter-clip { clip-path: none; }
+    .letter-paper {
+      transform-box: view-box;
+      transform: translateY(460px) scale(.985);
+      transform-origin: 50% 100%;
+      transition: transform 950ms cubic-bezier(.22, 1, .36, 1);
+      will-change: transform;
     }
-    .envelope-control.is-open:hover #envelope-art {
-      transform: translateY(-1px);
-    }
-    .scene-specks {
-      transform-box: fill-box;
-      transform-origin: center;
-      animation: speck-float 6s ease-in-out infinite alternate;
-    }
-    .scene-specks.delay { animation-delay: -3s; }
+    .letter-shadow { opacity: .22; transition: opacity 520ms ease 100ms; }
     .back-flap {
       opacity: 0;
       transform-box: fill-box;
       transform-origin: 50% 0%;
       transform: rotateX(0deg);
-      transition:
-        transform 820ms cubic-bezier(.18,.76,.23,1),
-        opacity 180ms ease 160ms;
       backface-visibility: hidden;
-    }
-    .letter-clip { clip-path: url(#envelope-clip); }
-    .envelope-control.is-open .letter-clip { clip-path: none; }
-    .letter-paper {
-      transform-box: fill-box;
-      transform-origin: 50% 100%;
-      transform: translateY(314px) scale(.985);
-      transition: transform 900ms cubic-bezier(.22,1,.36,1);
-      will-change: transform;
-    }
-    .letter-shadow {
-      opacity: .18;
-      transition: opacity 500ms ease 100ms;
+      transition: transform 760ms cubic-bezier(.22, 1, .36, 1), opacity 180ms ease;
     }
     .closed-flap {
-      opacity: 1;
       transform-box: fill-box;
       transform-origin: 50% 0%;
-      transition:
-        opacity 250ms ease 180ms,
-        transform 650ms cubic-bezier(.25,.72,.25,1);
       backface-visibility: hidden;
+      transition: transform 650ms cubic-bezier(.22, 1, .36, 1), opacity 230ms ease 120ms;
     }
-    .fold-strokes {
-      transition: opacity 380ms ease;
+    .envelope-control.is-open .letter-paper {
+      transform: translateY(-100px) scale(1);
+      transition-delay: 80ms;
     }
+    .envelope-control.is-open .letter-shadow { opacity: .36; }
     .envelope-control.is-open .back-flap {
       opacity: 1;
       transform: rotateX(180deg);
-      transition:
-        transform 760ms cubic-bezier(.22,1,.36,1),
-        opacity 260ms ease 80ms;
+      transition: transform 760ms cubic-bezier(.22, 1, .36, 1), opacity 240ms ease 70ms;
     }
-    .envelope-control.is-open .letter-paper {
-      transform: translateY(0) scale(1);
-      transition-delay: 110ms;
-    }
-    .envelope-control.is-open .letter-shadow { opacity: .34; }
     .envelope-control.is-open .closed-flap {
       opacity: 0;
-      transform: rotateX(-18deg);
-      transition-delay: 40ms, 0ms;
+      transform: rotateX(-175deg);
+      transition: transform 610ms cubic-bezier(.22, 1, .36, 1), opacity 150ms ease 100ms;
       pointer-events: none;
     }
     .hint {
       min-height: 28px;
-      margin-top: clamp(-2px, .6vw, 8px);
+      margin-top: clamp(2px, .6vw, 9px);
       padding-inline: 12px;
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 9px;
-      color: #8f4c57;
-      font-family: "Patrick Hand", cursive;
-      font-size: clamp(14px, 2.1vw, 17px);
-      letter-spacing: .11em;
+      color: #8d2022;
+      font-size: clamp(12px, 1.8vw, 15px);
+      font-weight: 600;
+      letter-spacing: .13em;
+      line-height: 1.4;
       text-align: center;
       text-transform: uppercase;
-      transition: color 300ms ease;
       user-select: none;
     }
     .hint-dot {
@@ -162,28 +129,24 @@
       height: 7px;
       flex: 0 0 7px;
       border-radius: 50%;
-      background: #e35b70;
-      box-shadow: 0 0 0 4px rgba(227,91,112,.10);
+      background: #d50c09;
+      box-shadow: 0 0 0 4px rgba(213, 12, 9, .1);
       animation: hint-pulse 2.2s ease-in-out infinite;
     }
-    .is-open + .hint .hint-dot { animation: none; background: #bb394f; }
-    @keyframes speck-float {
-      from { transform: translateY(-2px); }
-      to { transform: translateY(5px); }
-    }
+    .is-open + .hint .hint-dot { animation: none; background: #8d0503; }
     @keyframes hint-pulse {
-      0%,100% { box-shadow: 0 0 0 3px rgba(227,91,112,.09); }
-      50% { box-shadow: 0 0 0 6px rgba(227,91,112,.04); }
+      0%, 100% { box-shadow: 0 0 0 3px rgba(213, 12, 9, .09); }
+      50% { box-shadow: 0 0 0 6px rgba(213, 12, 9, .035); }
     }
     @media (max-width: 560px) {
-      main { padding: 10px 5px 18px; }
+      main { padding: 8px 4px 16px; }
       .envelope-control { width: 100%; }
-      .hint { margin-top: 3px; font-size: 13px; }
+      .hint { margin-top: 3px; font-size: 11px; letter-spacing: .1em; }
     }
-    @media (max-height: 720px) and (min-width: 561px) {
-      main { justify-content: flex-start; padding-top: 6px; }
-      .envelope-control { max-width: min(74vh, 680px); }
-      .hint { margin-top: -6px; }
+    @media (max-height: 560px) and (orientation: landscape) {
+      main { justify-content: flex-start; padding-top: 0; }
+      .envelope-control { max-width: min(94vw, 78vh * 1.5); }
+      .hint { margin-top: -5px; }
     }
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after {
@@ -198,152 +161,140 @@
 </head>
 <body>
   <main>
-    <button class="envelope-control" id="letter-control" type="button" aria-expanded="false" aria-label="Open the love letter">
-      <svg id="envelope-art" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 920" role="img" aria-labelledby="art-title art-desc">
-        <title id="art-title">A little love letter</title>
-        <desc id="art-desc">A red envelope with a blank sheet of paper tucked inside. Tap to open it.</desc>
+    <button class="envelope-control" id="letter-control" type="button" aria-expanded="false" aria-label="Open the red envelope by lifting its flap">
+      <svg id="envelope-art" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1536 1024" role="img" aria-labelledby="art-title art-desc">
+        <title id="art-title">A realistic red envelope with blank paper</title>
+        <desc id="art-desc">A deep red envelope. Tap its top flap to open it and reveal a blank sheet of paper.</desc>
         <defs>
-          <linearGradient id="env-body" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stop-color="#f15b70"/>
-            <stop offset=".45" stop-color="#e63850"/>
-            <stop offset="1" stop-color="#ca1834"/>
+          <linearGradient id="body" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="#bc0603"/><stop offset=".16" stop-color="#df0b08"/><stop offset=".5" stop-color="#d60705"/><stop offset=".84" stop-color="#e20b08"/><stop offset="1" stop-color="#b80503"/>
           </linearGradient>
-          <linearGradient id="env-left" x1="0" y1="0" x2="1" y2=".6">
-            <stop offset="0" stop-color="#f15b70"/>
-            <stop offset="1" stop-color="#d92c46"/>
+          <linearGradient id="body-light" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#f20f0a"/><stop offset=".52" stop-color="#d60805"/><stop offset="1" stop-color="#bd0603"/>
           </linearGradient>
-          <linearGradient id="env-right" x1="1" y1="0" x2="0" y2=".6">
-            <stop offset="0" stop-color="#ec4b64"/>
-            <stop offset="1" stop-color="#c91e39"/>
+          <linearGradient id="left-fold" x1="0" y1="0" x2="1" y2=".1">
+            <stop offset="0" stop-color="#b80603"/><stop offset=".65" stop-color="#dc0906"/><stop offset="1" stop-color="#ef1610"/>
           </linearGradient>
-          <linearGradient id="env-bottom" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stop-color="#df354e"/>
-            <stop offset="1" stop-color="#b91732"/>
+          <linearGradient id="right-fold" x1="1" y1="0" x2="0" y2=".1">
+            <stop offset="0" stop-color="#b80503"/><stop offset=".65" stop-color="#d80805"/><stop offset="1" stop-color="#ef1610"/>
           </linearGradient>
-          <linearGradient id="flap-top" x1="0" y1="0" x2=".25" y2="1">
-            <stop offset="0" stop-color="#ee4159"/>
-            <stop offset=".7" stop-color="#d7243d"/>
-            <stop offset="1" stop-color="#c81732"/>
+          <linearGradient id="bottom" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#f0140d"/><stop offset=".45" stop-color="#df0a06"/><stop offset="1" stop-color="#c00703"/>
+          </linearGradient>
+          <linearGradient id="flap" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#f20d09"/><stop offset=".24" stop-color="#ed0b08"/><stop offset=".7" stop-color="#df0805"/><stop offset="1" stop-color="#ca0603"/>
           </linearGradient>
           <linearGradient id="flap-inside" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stop-color="#cf1f38"/>
-            <stop offset="1" stop-color="#f26479"/>
+            <stop offset="0" stop-color="#a90000"/><stop offset=".5" stop-color="#cf0503"/><stop offset="1" stop-color="#ee1710"/>
           </linearGradient>
-          <linearGradient id="paper" x1="0" y1="0" x2="1" y2=".9">
-            <stop offset="0" stop-color="#fffaf5"/>
-            <stop offset=".55" stop-color="#fff7f0"/>
-            <stop offset="1" stop-color="#f9eee7"/>
+          <linearGradient id="rim" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="#990000" stop-opacity=".75"/><stop offset=".07" stop-color="#ff342c" stop-opacity=".45"/><stop offset=".5" stop-color="#ff342c" stop-opacity=".12"/><stop offset=".94" stop-color="#ff342c" stop-opacity=".4"/><stop offset="1" stop-color="#7e0000" stop-opacity=".8"/>
           </linearGradient>
-          <filter id="ground-shadow" x="-20%" y="-100%" width="140%" height="300%">
-            <feGaussianBlur stdDeviation="10"/>
+          <linearGradient id="paper" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#fffdfa"/><stop offset=".58" stop-color="#fffaf5"/><stop offset="1" stop-color="#f3e8e2"/>
+          </linearGradient>
+          <filter id="ground-shadow" x="-20%" y="-80%" width="140%" height="260%">
+            <feGaussianBlur stdDeviation="12"/>
           </filter>
-          <filter id="paper-shadow" x="-15%" y="-12%" width="130%" height="130%">
-            <feDropShadow dx="0" dy="4" stdDeviation="4.5" flood-color="#5a2029" flood-opacity=".25"/>
+          <filter id="envelope-shadow" x="-12%" y="-12%" width="124%" height="132%">
+            <feDropShadow dx="0" dy="8" stdDeviation="9" flood-color="#270805" flood-opacity=".24"/>
           </filter>
-          <filter id="paper-grain">
-            <feTurbulence type="fractalNoise" baseFrequency=".78" numOctaves="2" seed="8" result="noise"/>
-            <feColorMatrix in="noise" type="saturate" values="0" result="gray"/>
-            <feComponentTransfer in="gray" result="alpha">
-              <feFuncA type="table" tableValues="0 .045"/>
-            </feComponentTransfer>
-            <feBlend in="SourceGraphic" in2="alpha" mode="soft-light"/>
+          <filter id="flap-shadow" x="-10%" y="-12%" width="120%" height="130%">
+            <feDropShadow dx="0" dy="6" stdDeviation="5.5" flood-color="#230402" flood-opacity=".32"/>
           </filter>
-          <path id="heart" d="M0 12 C-4 7 -18 -1 -17 -12 C-16 -24 0 -24 3 -11 C8 -25 24 -21 24 -9 C24 2 10 12 3 20 Z"/>
-          <clipPath id="envelope-clip">
-            <path d="M178 425 Q178 419 188 419 L712 419 Q722 420 722 430 L722 785 Q721 796 709 797 L191 797 Q179 796 178 785Z"/>
-          </clipPath>
+          <filter id="paper-shadow" x="-12%" y="-12%" width="124%" height="132%">
+            <feDropShadow dx="0" dy="5" stdDeviation="5" flood-color="#4b0a08" flood-opacity=".23"/>
+          </filter>
+          <filter id="grain" x="0" y="0" width="100%" height="100%">
+            <feTurbulence type="fractalNoise" baseFrequency=".72" numOctaves="2" seed="13" result="n"/>
+            <feColorMatrix in="n" type="saturate" values="0" result="g"/>
+            <feComponentTransfer in="g" result="a"><feFuncA type="table" tableValues=".015 .1"/></feComponentTransfer>
+            <feBlend in="SourceGraphic" in2="a" mode="soft-light"/>
+          </filter>
+          <path id="envelope-shape" d="M207 162.5H1329.5Q1340.5 162.5 1340.5 174V869Q1340.5 881 1328.5 881H207.5Q195 881 195 868.5V175Q195 162.5 207 162.5Z"/>
+          <path id="flap-shape" d="M198 163H1335.5C1331 199 1318 231 1291 253L815 649C798 663 780 663 762 650L238 251C215 232 204 198 198 163Z"/>
+          <clipPath id="envelope-clip"><use href="#envelope-shape"/></clipPath>
         </defs>
 
-        <!-- Soft, printed-looking background details; no red glow. -->
-        <g fill="#eeb8c1" opacity=".26">
-          <circle cx="104" cy="165" r="12"/><circle cx="192" cy="256" r="8"/>
-          <circle cx="311" cy="68" r="10"/><circle cx="592" cy="55" r="12"/>
-          <circle cx="758" cy="124" r="9"/><circle cx="802" cy="292" r="12"/>
-          <circle cx="102" cy="505" r="9"/><circle cx="790" cy="520" r="10"/>
-          <circle cx="120" cy="726" r="11"/><circle cx="776" cy="741" r="12"/>
-          <circle cx="218" cy="855" r="8"/><circle cx="692" cy="868" r="10"/>
-        </g>
-        <g class="scene-specks delay" fill="#f3c7ce" opacity=".25">
-          <circle cx="148" cy="340" r="5"/><circle cx="736" cy="365" r="6"/>
-          <circle cx="352" cy="36" r="5"/><circle cx="548" cy="898" r="7"/>
-        </g>
+        <ellipse cx="768" cy="902" rx="452" ry="22" fill="#54110f" opacity=".15" filter="url(#ground-shadow)"/>
 
-        <!-- Grounding shadow: a soft contact shadow, not a halo. -->
-        <ellipse cx="450" cy="810" rx="250" ry="15" fill="#7e3542" opacity=".13" filter="url(#ground-shadow)"/>
-
-        <!-- Envelope back and hinged rear flap. -->
-        <g class="envelope-shell">
-          <path d="M178 425 Q178 419 188 419 L712 419 Q722 420 722 430 L722 785 Q721 796 709 797 L191 797 Q179 796 178 785Z"
-                fill="url(#env-body)" stroke="#2b2021" stroke-width="3.4" stroke-linejoin="round"/>
-          <path d="M180 432 Q450 510 720 432" fill="none" stroke="#ffb4be" stroke-opacity=".42" stroke-width="2"/>
+        <g class="envelope-shell" filter="url(#envelope-shadow)">
+          <use href="#envelope-shape" fill="url(#body)"/>
+          <use href="#envelope-shape" fill="url(#body-light)" opacity=".5"/>
+          <use href="#envelope-shape" fill="none" stroke="#8f0000" stroke-opacity=".32" stroke-width="2"/>
         </g>
 
         <g class="back-flap">
-          <path d="M180 425 L720 425 L450 652Z" fill="url(#flap-inside)" stroke="#342022" stroke-width="3.2" stroke-linejoin="round"/>
-          <path d="M191 429 L450 640 L709 429" fill="none" stroke="#f67a8c" stroke-opacity=".42" stroke-width="2"/>
+          <use href="#flap-shape" fill="url(#flap-inside)" stroke="#940000" stroke-width="2.5"/>
+          <path d="M239 252L762 650Q781 665 800 650L1291 253" fill="none" stroke="#ff4035" stroke-opacity=".32" stroke-width="3"/>
         </g>
 
-        <!-- The note is clipped to the envelope while tucked inside. -->
         <g class="letter-clip" clip-path="url(#envelope-clip)">
-        <g class="letter-paper">
-          <path class="letter-shadow" d="M224 139 Q225 130 237 131 L662 131 Q674 132 674 144 L674 437 Q674 449 663 458 L450 625 L237 458 Q224 448 224 437Z"
-                fill="#54303a" filter="url(#paper-shadow)"/>
-          <path d="M224 139 Q225 130 237 131 L662 131 Q674 132 674 144 L674 437 Q674 449 663 458 L450 625 L237 458 Q224 448 224 437Z"
-                fill="url(#paper)" stroke="#292122" stroke-width="3.2" stroke-linejoin="round" filter="url(#paper-grain)"/>
-          <path d="M231 143 Q232 137 240 137 L657 137" fill="none" stroke="#fff" stroke-opacity=".74" stroke-width="2"/>
-
-          <!-- Blank letter paper: no message, hearts, or signature. -->
-
-        </g>
-        </g>
-
-        <!-- Front folds overlay the lower edge of the paper, just like a real envelope. -->
-        <g class="fold-strokes" clip-path="url(#envelope-clip)">
-          <path d="M179 425 L450 625 L179 795Z" fill="url(#env-left)" stroke="#2b2021" stroke-width="3.3" stroke-linejoin="round"/>
-          <path d="M721 425 L450 625 L721 795Z" fill="url(#env-right)" stroke="#2b2021" stroke-width="3.3" stroke-linejoin="round"/>
-          <path d="M179 795 L450 625 L721 795Z" fill="url(#env-bottom)" stroke="#2b2021" stroke-width="3.3" stroke-linejoin="round"/>
-          <path d="M182 788 L450 620 L718 788" fill="none" stroke="#ffe4e7" stroke-opacity=".4" stroke-width="2"/>
-          <g fill="#fff6f3" stroke="#292122" stroke-width="3" stroke-linejoin="round">
-            <path d="M290 668 C278 656 263 642 264 628 C266 613 286 614 294 632 C302 612 323 616 325 631 C327 646 308 663 294 677Z"/>
-            <path d="M575 670 C563 657 548 643 550 629 C552 614 572 615 580 633 C588 613 609 617 611 632 C613 647 594 664 580 679Z"/>
-            <path d="M434 738 C424 728 411 716 413 704 C415 691 432 692 439 708 C447 691 464 694 466 707 C468 720 452 735 440 746Z"/>
+          <g class="letter-paper">
+            <rect class="letter-shadow" x="365" y="200" width="803" height="530" rx="13" fill="#3b0808" filter="url(#paper-shadow)"/>
+            <rect x="365" y="200" width="803" height="530" rx="13" fill="url(#paper)" stroke="#d8c8c1" stroke-width="2" filter="url(#grain)"/>
+            <path d="M378 214H1155" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="2"/>
           </g>
         </g>
 
-        <!-- Visible when closed; this fades away as the flap flips open. -->
+        <g class="front-folds" clip-path="url(#envelope-clip)" filter="url(#grain)">
+          <path d="M195 163L570 514L195 881Z" fill="url(#left-fold)"/>
+          <path d="M1341 163L972 514L1341 881Z" fill="url(#right-fold)"/>
+          <path d="M195 881L570 514L767 656Q783 667 800 656L972 514L1341 881Z" fill="url(#bottom)"/>
+          <path d="M196 880L570 514L767 655Q783 666 800 655L972 514L1340 880" fill="none" stroke="#870000" stroke-opacity=".48" stroke-width="3"/>
+          <path d="M202 870L570 521L765 659Q783 672 802 659L972 521L1334 870" fill="none" stroke="#ff2921" stroke-opacity=".2" stroke-width="2"/>
+        </g>
+
         <g class="closed-flap">
-          <path d="M180 425 L720 425 L450 650Z" fill="url(#flap-top)" stroke="#2b2021" stroke-width="3.4" stroke-linejoin="round"/>
-          <path d="M190 429 L450 641 L710 429" fill="none" stroke="#ff9ba9" stroke-opacity=".46" stroke-width="2"/>
-          <path d="M199 429 L450 637 L701 429" fill="none" stroke="#a9132b" stroke-opacity=".26" stroke-width="2"/>
-          <g transform="translate(435 513) scale(.6)">
-            <path d="M0 18 C-9 8 -31 -5 -27 -23 C-23 -42 0 -42 5 -22 C13 -44 39 -36 39 -16 C39 2 16 19 5 31Z"
-                  fill="#ffe8e7" stroke="#321c21" stroke-width="3.4" stroke-linejoin="round"/>
-          </g>
+          <use href="#flap-shape" fill="#2a0503" opacity=".3" transform="translate(0 4)" filter="url(#flap-shadow)"/>
+          <use href="#flap-shape" fill="url(#flap)" filter="url(#grain)"/>
+          <path d="M199 164H1334.5C1329 198 1317 230 1290 252L814 647C798 660 781 661 763 648L239 250C216 231 205 198 199 164Z" fill="none" stroke="url(#rim)" stroke-width="2.2"/>
+          <path d="M200 164H1333" fill="none" stroke="#ff4940" stroke-opacity=".42" stroke-width="2"/>
+          <path d="M202 167C207 199 216 226 240 248L761 647Q782 666 801 652L1291 252C1317 229 1329 200 1333 167" fill="none" stroke="#a50000" stroke-opacity=".44" stroke-width="3"/>
         </g>
       </svg>
     </button>
     <div class="hint" id="hint" aria-live="polite">
       <span class="hint-dot" aria-hidden="true"></span>
-      <span id="hint-text">Tap the flap to open</span>
+      <span id="hint-text">Tap the red flap to open</span>
     </div>
   </main>
   <script>
     (() => {
       const control = document.getElementById('letter-control');
+      const art = document.getElementById('envelope-art');
       const hintText = document.getElementById('hint-text');
       const artDesc = document.getElementById('art-desc');
 
-      function toggleLetter() {
-        const isOpen = control.classList.toggle('is-open');
-        control.setAttribute('aria-expanded', String(isOpen));
-        control.setAttribute('aria-label', isOpen ? 'Close the envelope' : 'Open the love letter');
-        hintText.textContent = isOpen ? 'Tap the envelope to close' : 'Tap the envelope to open';
-        artDesc.textContent = isOpen
-          ? 'The envelope is open and a blank sheet of paper is visible. Tap to close it.'
-          : 'A red envelope. Tap the top flap to open it and reveal a blank sheet of paper.';
+      function pointIsOnFlap(event) {
+        const matrix = art.getScreenCTM();
+        if (!matrix) return false;
+        const point = art.createSVGPoint();
+        point.x = event.clientX;
+        point.y = event.clientY;
+        const p = point.matrixTransform(matrix.inverse());
+        const t = (p.y - 163) / (649 - 163);
+        if (t < 0 || t > 1) return false;
+        const left = 198 + (815 - 198) * t;
+        const right = 1335.5 + (781 - 1335.5) * t;
+        return p.x >= left && p.x <= right;
       }
 
-      control.addEventListener('click', toggleLetter);
+      control.addEventListener('click', (event) => {
+        const isOpen = control.classList.contains('is-open');
+        // With the envelope closed, only the real triangular flap opens it.
+        // Keyboard activation remains available through the accessible button.
+        if (!isOpen && event.detail !== 0 && !pointIsOnFlap(event)) return;
+
+        const nextOpen = !isOpen;
+        control.classList.toggle('is-open', nextOpen);
+        control.setAttribute('aria-expanded', String(nextOpen));
+        control.setAttribute('aria-label', nextOpen ? 'Close the red envelope' : 'Open the red envelope by lifting its flap');
+        hintText.textContent = nextOpen ? 'Tap anywhere to close' : 'Tap the red flap to open';
+        artDesc.textContent = nextOpen
+          ? 'The red envelope is open, revealing a completely blank sheet of paper. Tap to close it.'
+          : 'A deep red envelope. Tap its top flap to open it and reveal a completely blank sheet of paper.';
+      });
     })();
   </script>
 </body>
