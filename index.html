@@ -300,53 +300,6 @@
       outline-offset: 3px;
     }
     /* The text editor is aligned to the real paper rectangle, not the viewport. */
-    .paper-editor-layer {
-      position: fixed;
-      z-index: 2147483646;
-      left: 0;
-      top: 0;
-      width: 0;
-      height: 0;
-      display: none;
-      overflow: hidden;
-      pointer-events: none;
-    }
-    .paper-editor-layer.is-visible { display: block; }
-    .paper-editor-display,
-    .paper-editor-input {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      margin: 0;
-      padding: 8%;
-      border: 0;
-      border-radius: 0;
-      background: transparent;
-      color: #242124;
-      font: 400 clamp(14px, 3.8vw, 21px)/1.65 ui-rounded, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      text-align: left;
-      white-space: pre-wrap;
-      overflow-wrap: anywhere;
-      word-break: normal;
-      overflow: auto;
-      box-sizing: border-box;
-      -webkit-appearance: none;
-      appearance: none;
-    }
-    .paper-editor-display { display: none; pointer-events: none; }
-    .paper-editor-display.has-content { display: block; }
-    .paper-editor-input {
-      display: none;
-      resize: none;
-      outline: none;
-      pointer-events: auto;
-      caret-color: #c00603;
-      -webkit-tap-highlight-color: transparent;
-    }
-    .paper-editor-layer.is-editing .paper-editor-input { display: block; }
-    .paper-editor-input::placeholder { color: #aaa4a0; opacity: 1; }
-    .paper-editor-input:focus-visible { outline: none; }
     .envelope-control.is-open .letter-paper {
       cursor: zoom-in;
       pointer-events: auto;
@@ -529,49 +482,6 @@
       let paperLocalBox = null;
       let activePaperAnimation = null;
       const paperMotionEasing = 'cubic-bezier(.22, 1, .36, 1)';
-
-      function updateFullscreenViewBox() {
-        if (!rect || !rect.width || !rect.height) return;
-        paperEditorLayer.style.left = `${rect.left}px`;
-        paperEditorLayer.style.top = `${rect.top}px`;
-        paperEditorLayer.style.width = `${rect.width}px`;
-        paperEditorLayer.style.height = `${rect.height}px`;
-      }
-
-      function savePaperEditor() {
-        if (!paperEditorLayer.classList.contains('is-editing')) return;
-        letterText = paperEditorInput.value;
-        paperEditorDisplay.textContent = letterText;
-        paperEditorDisplay.classList.toggle('has-content', letterText.length > 0);
-        paperEditorLayer.classList.remove('is-editing');
-        fullscreenEditLabel.textContent = 'Edit';
-        fullscreenEdit.setAttribute('aria-label', 'Edit the letter');
-        fullscreenEdit.setAttribute('title', 'Edit the letter');
-        fullscreenEdit.setAttribute('aria-pressed', 'false');
-        paperEditorLayer.classList.toggle('is-visible', letterText.length > 0);
-      }
-
-      function togglePaperEditor() {
-        if (!isPaperFullscreen) return;
-        if (paperEditorLayer.classList.contains('is-editing')) {
-          savePaperEditor();
-          fullscreenEdit.focus({ preventScroll: true });
-          return;
-        }
-        layoutPaperEditorLayer();
-        paperEditorInput.value = letterText;
-        paperEditorLayer.classList.add('is-visible', 'is-editing');
-        paperEditorLayer.setAttribute('aria-hidden', 'false');
-        fullscreenEditLabel.textContent = 'Done';
-        fullscreenEdit.setAttribute('aria-label', 'Finish editing the letter');
-        fullscreenEdit.setAttribute('title', 'Done editing');
-        fullscreenEdit.setAttribute('aria-pressed', 'true');
-        requestAnimationFrame(() => {
-          paperEditorInput.focus({ preventScroll: true });
-          const end = paperEditorInput.value.length;
-          paperEditorInput.setSelectionRange(end, end);
-        });
-      }
 
       function updateFullscreenViewBox() {
         const w = window.innerWidth || document.documentElement.clientWidth;
