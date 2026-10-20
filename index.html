@@ -299,6 +299,39 @@
       outline: 2px solid #007aff;
       outline-offset: 3px;
     }
+    .paper-fullscreen-text {
+      position: fixed;
+      z-index: 2147483647;
+      top: calc(max(16px, env(safe-area-inset-top)) + 44px);
+      right: calc(max(16px, env(safe-area-inset-right)) + 44px);
+      min-width: 72px;
+      height: 36px;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 0 14px;
+      border: 1px solid rgba(60, 60, 67, .22);
+      border-radius: 18px;
+      background: rgba(248, 248, 250, .96);
+      color: #1c1c1e;
+      box-shadow: 0 1px 5px rgba(0, 0, 0, .12);
+      -webkit-backdrop-filter: blur(12px);
+      backdrop-filter: blur(12px);
+      font: 500 13px/1 ui-rounded, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .paper-fullscreen-text.is-visible {
+      display: flex;
+    }
+    .paper-fullscreen-text:active {
+      background: rgba(229, 229, 234, .96);
+      box-shadow: none;
+    }
+    .paper-fullscreen-text:focus-visible {
+      outline: 2px solid #007aff;
+      outline-offset: 3px;
+    }
     /* The text editor is aligned to the real paper rectangle, not the viewport. */
     .envelope-control.is-open .letter-paper {
       cursor: zoom-in;
@@ -436,6 +469,7 @@
     </svg>
     <span id="paper-fullscreen-edit-label">Edit</span>
   </button>
+  <button class="paper-fullscreen-text" id="paper-fullscreen-text" type="button" aria-label="Text" title="Text">Text</button>
   <button class="paper-fullscreen-close" id="paper-fullscreen-close" type="button" aria-label="Return to the envelope" title="Back to envelope">
     <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" focusable="false">
       <path d="M5 5L15 15M15 5L5 15" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
@@ -473,6 +507,7 @@
       const fullscreenArt = document.getElementById('fullscreen-art');
       const fullscreenClose = document.getElementById('paper-fullscreen-close');
       const fullscreenEdit = document.getElementById('paper-fullscreen-edit');
+      const fullscreenText = document.getElementById('paper-fullscreen-text');
       let isPaperFullscreen = false;
       let fullscreenAnimating = false;
       let previousBodyOverflow = "";
@@ -649,6 +684,8 @@
         fullscreenClose.style.display = 'grid';
         fullscreenClose.classList.add('is-visible');
         fullscreenEdit.classList.add('is-visible');
+        fullscreenText.classList.remove('is-visible');
+        fullscreenEdit.setAttribute('aria-expanded', 'false');
 
         // Reparent the original paper node. The explicit animation below guarantees
         // a visible transition from its current envelope position to fullscreen.
@@ -670,6 +707,8 @@
         fullscreenAnimating = true;
         fullscreenClose.classList.remove('is-visible');
         fullscreenEdit.classList.remove('is-visible');
+        fullscreenText.classList.remove('is-visible');
+        fullscreenEdit.setAttribute('aria-expanded', 'false');
 
         // Capture the in-flight visual position before cancelling an opening animation.
         const currentPaperRect = paperSurface.getBoundingClientRect();
@@ -731,6 +770,14 @@
         openPaperFullscreen();
       });
       fullscreenClose.addEventListener('click', closePaperFullscreen);
+      fullscreenEdit.setAttribute('aria-expanded', 'false');
+      fullscreenEdit.setAttribute('aria-controls', 'paper-fullscreen-text');
+      fullscreenEdit.addEventListener('click', () => {
+        if (!isPaperFullscreen) return;
+        const expanded = fullscreenEdit.getAttribute('aria-expanded') === 'true';
+        fullscreenEdit.setAttribute('aria-expanded', String(!expanded));
+        fullscreenText.classList.toggle('is-visible', !expanded);
+      });
       // Touching the blank full-screen page should not dismiss it by accident.
       // Only the close control or Escape returns to the envelope.
       paperFullscreen.addEventListener('click', (event) => {
