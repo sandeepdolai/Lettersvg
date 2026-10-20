@@ -249,32 +249,35 @@
       outline-offset: 3px;
     }
     .letter-paper { cursor: default; }
+    /* Quiet, native-feeling floating control: crisp edge, restrained shadow, clear hit target. */
     .paper-fullscreen-edit {
       position: fixed;
       z-index: 2147483647;
       top: max(16px, env(safe-area-inset-top));
       right: calc(max(16px, env(safe-area-inset-right)) + 44px);
-      min-width: 72px;
+      min-width: 76px;
       height: 36px;
       display: none;
       align-items: center;
       justify-content: center;
-      gap: 6px;
-      padding: 0 11px;
-      border: 1px solid rgba(60, 60, 67, .22);
+      gap: 7px;
+      padding: 0 12px;
+      border: 1px solid rgba(60, 60, 67, .16);
       border-radius: 18px;
-      background: rgba(248, 248, 250, .96);
-      color: #1c1c1e;
-      box-shadow: 0 1px 5px rgba(0, 0, 0, .12);
-      -webkit-backdrop-filter: blur(12px);
-      backdrop-filter: blur(12px);
-      font: 500 13px/1 ui-rounded, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: rgba(255, 255, 255, .88);
+      color: #242326;
+      box-shadow: 0 2px 8px rgba(24, 22, 22, .08), 0 8px 24px rgba(24, 22, 22, .06);
+      -webkit-backdrop-filter: saturate(180%) blur(18px);
+      backdrop-filter: saturate(180%) blur(18px);
+      font: 550 13px/1 ui-rounded, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      letter-spacing: -.01em;
       cursor: pointer;
       opacity: 0;
       visibility: hidden;
       pointer-events: none;
       -webkit-tap-highlight-color: transparent;
-      transition: opacity 180ms ease, visibility 0s 180ms, background-color 160ms ease, box-shadow 160ms ease;
+      transform: translateY(-2px) scale(.98);
+      transition: opacity 180ms ease, transform 220ms cubic-bezier(.2, .8, .2, 1), visibility 0s 220ms, background-color 160ms ease, box-shadow 160ms ease;
     }
     body.is-paper-fullscreen .paper-fullscreen-edit {
       display: flex !important;
@@ -283,7 +286,8 @@
       opacity: 1;
       visibility: visible;
       pointer-events: auto;
-      transition: opacity 180ms ease, visibility 0s, background-color 160ms ease, box-shadow 160ms ease;
+      transform: translateY(0) scale(1);
+      transition: opacity 180ms ease, transform 220ms cubic-bezier(.2, .8, .2, 1), visibility 0s, background-color 160ms ease, box-shadow 160ms ease;
     }
     .paper-fullscreen-edit svg {
       display: block;
@@ -291,45 +295,76 @@
       height: 14px;
       flex: 0 0 auto;
     }
+    .paper-fullscreen-edit:hover {
+      background: rgba(255, 255, 255, .97);
+      box-shadow: 0 3px 10px rgba(24, 22, 22, .09), 0 10px 28px rgba(24, 22, 22, .07);
+    }
     .paper-fullscreen-edit:active {
-      background: rgba(229, 229, 234, .96);
-      box-shadow: none;
+      background: rgba(242, 241, 243, .98);
+      box-shadow: 0 1px 3px rgba(24, 22, 22, .08);
+      transform: scale(.97);
     }
     .paper-fullscreen-edit:focus-visible {
-      outline: 2px solid #007aff;
+      outline: 2px solid #9a332e;
       outline-offset: 3px;
     }
+    /* A single-item action panel keeps the next step discoverable without adding clutter. */
     .paper-fullscreen-text {
       position: fixed;
       z-index: 2147483647;
       top: calc(max(16px, env(safe-area-inset-top)) + 44px);
       right: calc(max(16px, env(safe-area-inset-right)) + 44px);
-      min-width: 72px;
-      height: 36px;
-      display: none;
+      width: 132px;
+      min-height: 44px;
+      display: flex;
       align-items: center;
-      justify-content: center;
-      padding: 0 14px;
-      border: 1px solid rgba(60, 60, 67, .22);
-      border-radius: 18px;
-      background: rgba(248, 248, 250, .96);
-      color: #1c1c1e;
-      box-shadow: 0 1px 5px rgba(0, 0, 0, .12);
-      -webkit-backdrop-filter: blur(12px);
-      backdrop-filter: blur(12px);
-      font: 500 13px/1 ui-rounded, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      justify-content: flex-start;
+      gap: 10px;
+      padding: 0 13px;
+      border: 1px solid rgba(60, 60, 67, .14);
+      border-radius: 13px;
+      background: rgba(255, 255, 255, .94);
+      color: #242326;
+      box-shadow: 0 4px 12px rgba(24, 22, 22, .08), 0 12px 32px rgba(24, 22, 22, .09);
+      -webkit-backdrop-filter: saturate(180%) blur(20px);
+      backdrop-filter: saturate(180%) blur(20px);
+      font: 550 14px/1 ui-rounded, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      letter-spacing: -.01em;
+      text-align: left;
       cursor: pointer;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transform: translateY(-5px) scale(.98);
+      transform-origin: top right;
       -webkit-tap-highlight-color: transparent;
+      transition: opacity 160ms ease, transform 220ms cubic-bezier(.2, .8, .2, 1), visibility 0s 220ms, background-color 160ms ease, box-shadow 160ms ease;
+    }
+    .paper-fullscreen-text svg {
+      display: block;
+      width: 18px;
+      height: 18px;
+      flex: 0 0 auto;
+      color: #6b6666;
     }
     .paper-fullscreen-text.is-visible {
-      display: flex;
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+      transform: translateY(0) scale(1);
+      transition: opacity 160ms ease, transform 220ms cubic-bezier(.2, .8, .2, 1), visibility 0s, background-color 160ms ease, box-shadow 160ms ease;
+    }
+    .paper-fullscreen-text:hover {
+      background: rgba(255, 255, 255, .99);
+      box-shadow: 0 5px 14px rgba(24, 22, 22, .09), 0 14px 36px rgba(24, 22, 22, .1);
     }
     .paper-fullscreen-text:active {
-      background: rgba(229, 229, 234, .96);
-      box-shadow: none;
+      background: rgba(242, 241, 243, .98);
+      box-shadow: 0 1px 3px rgba(24, 22, 22, .08);
+      transform: scale(.985);
     }
     .paper-fullscreen-text:focus-visible {
-      outline: 2px solid #007aff;
+      outline: 2px solid #9a332e;
       outline-offset: 3px;
     }
     /* The text editor is aligned to the real paper rectangle, not the viewport. */
@@ -469,7 +504,12 @@
     </svg>
     <span id="paper-fullscreen-edit-label">Edit</span>
   </button>
-  <button class="paper-fullscreen-text" id="paper-fullscreen-text" type="button" aria-label="Text" title="Text">Text</button>
+  <button class="paper-fullscreen-text" id="paper-fullscreen-text" type="button" aria-label="Text" title="Text">
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+      <path d="M4.5 6.5h15M12 6.5v11M8.5 17.5h7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <span>Text</span>
+  </button>
   <button class="paper-fullscreen-close" id="paper-fullscreen-close" type="button" aria-label="Return to the envelope" title="Back to envelope">
     <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" focusable="false">
       <path d="M5 5L15 15M15 5L5 15" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
