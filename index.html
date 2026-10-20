@@ -248,7 +248,7 @@
       outline: 2px solid #007aff;
       outline-offset: 3px;
     }
-    /* The editor sits immediately before the close control in fullscreen. */
+    .letter-paper { cursor: default; }
     .paper-fullscreen-edit {
       position: fixed;
       z-index: 2147483647;
@@ -299,55 +299,40 @@
       outline: 2px solid #007aff;
       outline-offset: 3px;
     }
-    /* The text editor is aligned to the real paper rectangle, not the viewport. */
-    .paper-editor-layer {
+    .paper-fullscreen-text {
       position: fixed;
-      z-index: 2147483646;
-      left: 0;
-      top: 0;
-      width: 0;
-      height: 0;
+      z-index: 2147483647;
+      top: calc(max(16px, env(safe-area-inset-top)) + 44px);
+      right: calc(max(16px, env(safe-area-inset-right)) + 44px);
+      min-width: 72px;
+      height: 36px;
       display: none;
-      overflow: hidden;
-      pointer-events: none;
-    }
-    .paper-editor-layer.is-visible { display: block; }
-    .paper-editor-display,
-    .paper-editor-input {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      margin: 0;
-      padding: 8%;
-      border: 0;
-      border-radius: 0;
-      background: transparent;
-      color: #242124;
-      font: 400 clamp(14px, 3.8vw, 21px)/1.65 ui-rounded, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      text-align: left;
-      white-space: pre-wrap;
-      overflow-wrap: anywhere;
-      word-break: normal;
-      overflow: auto;
-      box-sizing: border-box;
-      -webkit-appearance: none;
-      appearance: none;
-    }
-    .paper-editor-display { display: none; pointer-events: none; }
-    .paper-editor-display.has-content { display: block; }
-    .paper-editor-input {
-      display: none;
-      resize: none;
-      outline: none;
-      pointer-events: auto;
-      caret-color: #c00603;
+      align-items: center;
+      justify-content: center;
+      padding: 0 14px;
+      border: 1px solid rgba(60, 60, 67, .22);
+      border-radius: 18px;
+      background: rgba(248, 248, 250, .96);
+      color: #1c1c1e;
+      box-shadow: 0 1px 5px rgba(0, 0, 0, .12);
+      -webkit-backdrop-filter: blur(12px);
+      backdrop-filter: blur(12px);
+      font: 500 13px/1 ui-rounded, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      cursor: pointer;
       -webkit-tap-highlight-color: transparent;
     }
-    .paper-editor-layer.is-editing .paper-editor-input { display: block; }
-    .paper-editor-input::placeholder { color: #aaa4a0; opacity: 1; }
-    .paper-editor-input:focus-visible { outline: none; }
-    .letter-paper { cursor: default; }
+    .paper-fullscreen-text.is-visible {
+      display: flex;
+    }
+    .paper-fullscreen-text:active {
+      background: rgba(229, 229, 234, .96);
+      box-shadow: none;
+    }
+    .paper-fullscreen-text:focus-visible {
+      outline: 2px solid #007aff;
+      outline-offset: 3px;
+    }
+    /* The text editor is aligned to the real paper rectangle, not the viewport. */
     .envelope-control.is-open .letter-paper {
       cursor: zoom-in;
       pointer-events: auto;
@@ -478,16 +463,13 @@
     <div class="paper-fullscreen-backdrop" aria-hidden="true"></div>
     <svg class="fullscreen-art" id="fullscreen-art" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 390 844" preserveAspectRatio="none" aria-label="The same blank letter paper expanded to full screen"></svg>
   </div>
-  <div class="paper-editor-layer" id="paper-editor-layer" aria-hidden="true">
-    <div class="paper-editor-display" id="paper-editor-display" aria-live="polite"></div>
-    <textarea class="paper-editor-input" id="paper-editor-input" aria-label="Write on the letter" placeholder="Write your letter…" spellcheck="true"></textarea>
-  </div>
   <button class="paper-fullscreen-edit" id="paper-fullscreen-edit" type="button" aria-label="Edit the letter" aria-pressed="false" title="Edit the letter">
     <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" focusable="false">
       <path d="M11.9 4.1 15.9 8.1M3.4 16.6l3.9-.8L16.1 7a1.7 1.7 0 0 0-2.4-2.4L4.9 13.4l-1.5 3.2Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>
     <span id="paper-fullscreen-edit-label">Edit</span>
   </button>
+  <button class="paper-fullscreen-text" id="paper-fullscreen-text" type="button" aria-label="Text" title="Text">Text</button>
   <button class="paper-fullscreen-close" id="paper-fullscreen-close" type="button" aria-label="Return to the envelope" title="Back to envelope">
     <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" focusable="false">
       <path d="M5 5L15 15M15 5L5 15" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
@@ -525,11 +507,7 @@
       const fullscreenArt = document.getElementById('fullscreen-art');
       const fullscreenClose = document.getElementById('paper-fullscreen-close');
       const fullscreenEdit = document.getElementById('paper-fullscreen-edit');
-      const fullscreenEditLabel = document.getElementById('paper-fullscreen-edit-label');
-      const paperEditorLayer = document.getElementById('paper-editor-layer');
-      const paperEditorDisplay = document.getElementById('paper-editor-display');
-      const paperEditorInput = document.getElementById('paper-editor-input');
-      let letterText = '';
+      const fullscreenText = document.getElementById('paper-fullscreen-text');
       let isPaperFullscreen = false;
       let fullscreenAnimating = false;
       let previousBodyOverflow = "";
@@ -539,49 +517,6 @@
       let paperLocalBox = null;
       let activePaperAnimation = null;
       const paperMotionEasing = 'cubic-bezier(.22, 1, .36, 1)';
-
-      function layoutPaperEditorLayer(rect = paperSurface.getBoundingClientRect()) {
-        if (!rect || !rect.width || !rect.height) return;
-        paperEditorLayer.style.left = `${rect.left}px`;
-        paperEditorLayer.style.top = `${rect.top}px`;
-        paperEditorLayer.style.width = `${rect.width}px`;
-        paperEditorLayer.style.height = `${rect.height}px`;
-      }
-
-      function savePaperEditor() {
-        if (!paperEditorLayer.classList.contains('is-editing')) return;
-        letterText = paperEditorInput.value;
-        paperEditorDisplay.textContent = letterText;
-        paperEditorDisplay.classList.toggle('has-content', letterText.length > 0);
-        paperEditorLayer.classList.remove('is-editing');
-        fullscreenEditLabel.textContent = 'Edit';
-        fullscreenEdit.setAttribute('aria-label', 'Edit the letter');
-        fullscreenEdit.setAttribute('title', 'Edit the letter');
-        fullscreenEdit.setAttribute('aria-pressed', 'false');
-        paperEditorLayer.classList.toggle('is-visible', letterText.length > 0);
-      }
-
-      function togglePaperEditor() {
-        if (!isPaperFullscreen) return;
-        if (paperEditorLayer.classList.contains('is-editing')) {
-          savePaperEditor();
-          fullscreenEdit.focus({ preventScroll: true });
-          return;
-        }
-        layoutPaperEditorLayer();
-        paperEditorInput.value = letterText;
-        paperEditorLayer.classList.add('is-visible', 'is-editing');
-        paperEditorLayer.setAttribute('aria-hidden', 'false');
-        fullscreenEditLabel.textContent = 'Done';
-        fullscreenEdit.setAttribute('aria-label', 'Finish editing the letter');
-        fullscreenEdit.setAttribute('title', 'Done editing');
-        fullscreenEdit.setAttribute('aria-pressed', 'true');
-        requestAnimationFrame(() => {
-          paperEditorInput.focus({ preventScroll: true });
-          const end = paperEditorInput.value.length;
-          paperEditorInput.setSelectionRange(end, end);
-        });
-      }
 
       function updateFullscreenViewBox() {
         const w = window.innerWidth || document.documentElement.clientWidth;
@@ -749,6 +684,8 @@
         fullscreenClose.style.display = 'grid';
         fullscreenClose.classList.add('is-visible');
         fullscreenEdit.classList.add('is-visible');
+        fullscreenText.classList.remove('is-visible');
+        fullscreenEdit.setAttribute('aria-expanded', 'false');
 
         // Reparent the original paper node. The explicit animation below guarantees
         // a visible transition from its current envelope position to fullscreen.
@@ -758,14 +695,6 @@
 
         const fullscreenTargetRect = getContainedFullscreenRect();
         animatePaperBetweenRects(currentPaperRect, fullscreenTargetRect, 820);
-        if (letterText.length > 0) {
-          window.setTimeout(() => {
-            if (!isPaperFullscreen || paperEditorLayer.classList.contains('is-editing')) return;
-            layoutPaperEditorLayer(getContainedFullscreenRect());
-            paperEditorLayer.classList.add('is-visible');
-            paperEditorLayer.setAttribute('aria-hidden', 'false');
-          }, 850);
-        }
         paperFullscreen.classList.add('is-fullscreen');
 
         // Permit close immediately; the animation itself continues independently.
@@ -776,15 +705,10 @@
       function closePaperFullscreen() {
         if (!isPaperFullscreen || fullscreenAnimating || !normalPaperRect || !paperLocalBox) return;
         fullscreenAnimating = true;
-        savePaperEditor();
-        paperEditorLayer.classList.remove('is-visible', 'is-editing');
-        paperEditorLayer.setAttribute('aria-hidden', 'true');
         fullscreenClose.classList.remove('is-visible');
         fullscreenEdit.classList.remove('is-visible');
-        fullscreenEditLabel.textContent = 'Edit';
-        fullscreenEdit.setAttribute('aria-label', 'Edit the letter');
-        fullscreenEdit.setAttribute('title', 'Edit the letter');
-        fullscreenEdit.setAttribute('aria-pressed', 'false');
+        fullscreenText.classList.remove('is-visible');
+        fullscreenEdit.setAttribute('aria-expanded', 'false');
 
         // Capture the in-flight visual position before cancelling an opening animation.
         const currentPaperRect = paperSurface.getBoundingClientRect();
@@ -846,14 +770,13 @@
         openPaperFullscreen();
       });
       fullscreenClose.addEventListener('click', closePaperFullscreen);
-      fullscreenEdit.addEventListener('click', togglePaperEditor);
-      paperEditorInput.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape') {
-          event.preventDefault();
-          event.stopPropagation();
-          savePaperEditor();
-          fullscreenEdit.focus({ preventScroll: true });
-        }
+      fullscreenEdit.setAttribute('aria-expanded', 'false');
+      fullscreenEdit.setAttribute('aria-controls', 'paper-fullscreen-text');
+      fullscreenEdit.addEventListener('click', () => {
+        if (!isPaperFullscreen) return;
+        const expanded = fullscreenEdit.getAttribute('aria-expanded') === 'true';
+        fullscreenEdit.setAttribute('aria-expanded', String(!expanded));
+        fullscreenText.classList.toggle('is-visible', !expanded);
       });
       // Touching the blank full-screen page should not dismiss it by accident.
       // Only the close control or Escape returns to the envelope.
@@ -865,9 +788,6 @@
         updateFullscreenViewBox();
         const targetRect = getContainedFullscreenRect();
         if (!fullscreenAnimating) setPaperTransformForRect(targetRect);
-        if (paperEditorLayer.classList.contains('is-visible')) {
-          layoutPaperEditorLayer(targetRect);
-        }
       });
       document.addEventListener('keydown', (event) => {
         if (event.key === 'Escape' && isPaperFullscreen) closePaperFullscreen();
