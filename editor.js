@@ -21,7 +21,7 @@ function chosen(){return items.find(o=>o.id===selected)||null;}
 function positionLayer(){
  if(!document.body.classList.contains('is-paper-fullscreen')){layer.style.display='none';layer.style.pointerEvents='none';return;}
  const r=surface.getBoundingClientRect();if(!r.width||!r.height)return;
- contentScale=r.width/390;
+ contentScale=Math.min(r.width/390,r.height/844);
  layer.style.setProperty('--ls-content-scale',String(contentScale));
  Object.assign(layer.style,{display:'block',left:r.left+'px',top:r.top+'px',width:r.width+'px',height:r.height+'px',opacity:'1',pointerEvents:editing?'auto':'none'});draw();
 }
