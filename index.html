@@ -794,87 +794,62 @@
         paperFullscreen.classList.add('is-closing');
         const closingMotion = animatePaperBetweenRects(currentPaperRect, targetPaperRect, 820);
 
-        // Chain the envelope settle directly to completion of the main close
-        // animation. This avoids timer drift and never leaves the paper parked
-        // at the raised position waiting for a second timeout.
+        // Keep both movements in the fullscreen SVG's screen-space coordinate
+        // system. Reparenting the SVG node between the two animations was the
+        // reason the downward settle could appear not to move on some devices.
         closingMotion.finished.then(() => {
           if (!isPaperFullscreen || !fullscreenAnimating) return;
 
-          // Persist the measured raised endpoint before changing SVG coordinate systems.
+          // The first animation has reached the measured raised envelope position.
           letterPaper.style.transform = closingMotion.targetTransform;
           if (closingMotion.animation && activePaperAnimation === closingMotion.animation) {
             closingMotion.animation.cancel();
             activePaperAnimation = null;
           }
 
-          paperFullscreen.classList.remove('is-fullscreen', 'is-closing');
-          paperFullscreen.style.display = 'none';
-          paperFullscreen.setAttribute('aria-hidden', 'true');
-          document.body.classList.remove('is-paper-fullscreen');
-          fullscreenClose.style.display = '';
-          fullscreenClose.classList.remove('is-visible');
-          fullscreenEdit.classList.remove('is-visible');
-
-          // Restore the same paper node at the raised envelope position.
-          // The downward move below uses Web Animations directly on this restored
-          // SVG node, so it does not depend on a CSS class transition restarting.
-          control.classList.add('is-returning');
-          restorePaperToEnvelope();
-          letterPaper.getBoundingClientRect();
-          isPaperFullscreen = false;
-          document.body.style.overflow = previousBodyOverflow;
-
+          // Animate that exact same node downward to the measured normal open
+          // position before moving it back into its original SVG parent.
           const prefersReducedMotion = window.matchMedia &&
             window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-          const settleDuration = prefersReducedMotion ? 1 : 920;
-          const settleFrom = window.getComputedStyle(letterPaper).transform;
-          const settleTo = 'translateY(-250px) rotate(0deg) scale(1)';
+          const settleDuration = prefersReducedMotion ? 1 : 640;
+          const settleMotion = animatePaperBetweenRects(
+            targetPaperRect,
+            normalPaperRect,
+            settleDuration
+          );
 
-          if (typeof letterPaper.animate === 'function') {
-            const settleAnimation = letterPaper.animate(
-              [{ transform: settleFrom }, { transform: settleTo }],
-              {
-                duration: settleDuration,
-                easing: paperMotionEasing,
-                fill: 'forwards'
-              }
-            );
-            activePaperAnimation = settleAnimation;
-            settleAnimation.finished.then(() => {
-              if (activePaperAnimation !== settleAnimation) return;
+          settleMotion.finished.then(() => {
+            if (!isPaperFullscreen || !fullscreenAnimating) return;
 
-              // Remove the temporary raised state while the animation is still
-              // holding the exact resting transform, then release the animation.
-              control.classList.remove('is-returning', 'is-settling');
-              letterPaper.style.transition = '';
-              letterPaper.style.transform = '';
-              settleAnimation.cancel();
+            letterPaper.style.transform = settleMotion.targetTransform;
+            if (settleMotion.animation && activePaperAnimation === settleMotion.animation) {
+              settleMotion.animation.cancel();
               activePaperAnimation = null;
-              letterPaper.getBoundingClientRect();
-              fullscreenAnimating = false;
-            }).catch(() => {
-              // A cancelled animation must not overwrite a newer paper animation.
-            });
-            return;
-          }
+            }
 
-          // Older-browser fallback: transition an explicit inline transform instead
-          // of relying on selector/class transition timing.
-          letterPaper.style.transform = settleFrom;
-          letterPaper.style.transition = `transform ${settleDuration}ms ${paperMotionEasing}`;
-          letterPaper.getBoundingClientRect();
-          requestAnimationFrame(() => {
-            letterPaper.style.transform = settleTo;
-            window.setTimeout(() => {
-              control.classList.remove('is-returning', 'is-settling');
-              letterPaper.style.transition = '';
-              letterPaper.style.transform = '';
-              letterPaper.getBoundingClientRect();
-              fullscreenAnimating = false;
-            }, settleDuration + 60);
+            // Both motions are complete at a measured screen position. Now restore
+            // the same SVG paper node to the envelope; its native open transform
+            // matches normalPaperRect, so the hand-off does not jump or replace it.
+            paperFullscreen.classList.remove('is-fullscreen', 'is-closing');
+            paperFullscreen.style.display = 'none';
+            paperFullscreen.setAttribute('aria-hidden', 'true');
+            document.body.classList.remove('is-paper-fullscreen');
+            fullscreenClose.style.display = '';
+            fullscreenClose.classList.remove('is-visible');
+            fullscreenEdit.classList.remove('is-visible');
+
+            control.classList.remove('is-returning', 'is-settling');
+            restorePaperToEnvelope();
+            isPaperFullscreen = false;
+            document.body.style.overflow = previousBodyOverflow;
+            letterPaper.getBoundingClientRect();
+            fullscreenAnimating = false;
+          }).catch(() => {
+            // Do not leave the UI locked if the second animation is interrupted.
+            fullscreenAnimating = false;
           });
         }).catch(() => {
-          // Keep the close path resilient if a browser rejects an animation promise.
+          // Keep the close path responsive if a browser rejects an animation promise.
           fullscreenAnimating = false;
         });
       }
