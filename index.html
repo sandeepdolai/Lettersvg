@@ -716,7 +716,10 @@
         const previousInlineTransition = letterPaper.style.transition;
         letterPaper.style.transition = 'none';
         letterPaper.style.transform = 'translateY(-250px) rotate(0deg) scale(1)';
-        normalPaperRect = paperSurface.getBoundingClientRect();
+        // Store the original screen bounds of the whole paper group, because
+        // animatePaperBetweenRects maps the group's local bounding box (paperLocalBox),
+        // not just the white paper surface.
+        normalPaperRect = letterPaper.getBoundingClientRect();
         letterPaper.style.transform = previousInlineTransform;
         letterPaper.style.transition = previousInlineTransition;
 
@@ -759,11 +762,11 @@
         fullscreenText.classList.remove('is-visible');
         fullscreenEdit.setAttribute('aria-expanded', 'false');
 
-        // Animate the real sheet to the exact screen rectangle it occupied before
-        // fullscreen. Avoid the older raised-then-settle sequence, which could leave
-        // the sheet offset when its SVG node was restored to the envelope.
-        const currentPaperRect = paperSurface.getBoundingClientRect();
-        const targetPaperRect = normalPaperRect;
+        // Preserve the original close motion: travel up to the envelope's raised
+        // position, then settle down into the open envelope. These rectangles must
+        // describe the whole SVG paper group, matching paperLocalBox below.
+        const currentPaperRect = letterPaper.getBoundingClientRect();
+        const targetPaperRect = getRaisedPaperRect();
         if (activePaperAnimation) {
           activePaperAnimation.cancel();
           activePaperAnimation = null;
@@ -787,19 +790,29 @@
           fullscreenClose.classList.remove('is-visible');
           fullscreenEdit.classList.remove('is-visible');
           restorePaperToEnvelope();
-
-          // The group is back under its original SVG transforms. Its CSS open-state
-          // transform now matches targetPaperRect, so leave that native position alone.
+          // The animation endpoint is the original raised envelope position. Keep
+          // the paper there while its original SVG parent is restored, then run the
+          // same gentle downward settle used by the envelope's native CSS motion.
+          control.classList.add('is-returning');
           letterPaper.getBoundingClientRect();
           isPaperFullscreen = false;
           document.body.style.overflow = previousBodyOverflow;
 
-          requestAnimationFrame(() => {
-            letterPaper.style.transition = '';
-            letterPaper.style.transform = '';
-            letterPaper.getBoundingClientRect();
-            fullscreenAnimating = false;
-          });
+          window.setTimeout(() => {
+            control.classList.remove('is-returning');
+            control.classList.add('is-settling');
+            requestAnimationFrame(() => {
+              letterPaper.style.transition = '';
+              letterPaper.style.transform = '';
+              letterPaper.getBoundingClientRect();
+            });
+            window.setTimeout(() => {
+              control.classList.remove('is-settling');
+              letterPaper.style.transition = '';
+              letterPaper.style.transform = '';
+              fullscreenAnimating = false;
+            }, 960);
+          }, 790);
         }, 850);
       }
 
