@@ -675,10 +675,25 @@
 
         // Compatibility fallback for browsers without the Web Animations API.
         letterPaper.style.transition = `transform ${actualDuration}ms ${paperMotionEasing}`;
-        requestAnimationFrame(() => {
-          letterPaper.style.transform = toTransform;
+        const finished = new Promise(resolve => {
+          let completed = false;
+          const finish = () => {
+            if (completed) return;
+            completed = true;
+            letterPaper.removeEventListener('transitionend', onTransitionEnd);
+            window.clearTimeout(fallbackTimer);
+            resolve();
+          };
+          const onTransitionEnd = event => {
+            if (event.target === letterPaper && event.propertyName === 'transform') finish();
+          };
+          letterPaper.addEventListener('transitionend', onTransitionEnd);
+          const fallbackTimer = window.setTimeout(finish, actualDuration + 100);
+          requestAnimationFrame(() => {
+            letterPaper.style.transform = toTransform;
+          });
         });
-        return { animation: null, targetTransform: toTransform, finished: Promise.resolve() };
+        return { animation: null, targetTransform: toTransform, finished };
       }
 
       function restorePaperToEnvelope() {
@@ -789,30 +804,26 @@
           fullscreenClose.style.display = '';
           fullscreenClose.classList.remove('is-visible');
           fullscreenEdit.classList.remove('is-visible');
-          restorePaperToEnvelope();
-          // The animation endpoint is the original raised envelope position. Keep
-          // the paper there while its original SVG parent is restored, then run the
-          // same gentle downward settle used by the envelope's native CSS motion.
+          // Restore the same SVG paper at its raised envelope position. Then run
+          // a separate, explicit screen-space animation down to its measured resting
+          // position; do not rely on a CSS class transition that can be skipped when
+          // the SVG group is reparented.
           control.classList.add('is-returning');
-          letterPaper.getBoundingClientRect();
+          restorePaperToEnvelope();
+          const raisedPaperRect = letterPaper.getBoundingClientRect();
           isPaperFullscreen = false;
           document.body.style.overflow = previousBodyOverflow;
 
-          window.setTimeout(() => {
-            control.classList.remove('is-returning');
-            control.classList.add('is-settling');
-            requestAnimationFrame(() => {
-              letterPaper.style.transition = '';
-              letterPaper.style.transform = '';
-              letterPaper.getBoundingClientRect();
-            });
-            window.setTimeout(() => {
-              control.classList.remove('is-settling');
-              letterPaper.style.transition = '';
-              letterPaper.style.transform = '';
-              fullscreenAnimating = false;
-            }, 960);
-          }, 790);
+          const settleMotion = animatePaperBetweenRects(raisedPaperRect, normalPaperRect, 820);
+          settleMotion.finished.then(() => {
+            // The target rectangle matches the paper's native open position, so
+            // removing the temporary transform returns control to the original CSS.
+            control.classList.remove('is-returning', 'is-settling');
+            letterPaper.style.transition = '';
+            letterPaper.style.transform = '';
+            letterPaper.getBoundingClientRect();
+            fullscreenAnimating = false;
+          });
         }, 850);
       }
 
