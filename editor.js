@@ -3,7 +3,7 @@
 const fs=document.getElementById('paper-fullscreen'), surface=document.getElementById('paper-surface'),
 edit=document.getElementById('paper-fullscreen-edit'), close=document.getElementById('paper-fullscreen-close');
 if(!fs||!surface||!edit||!close)return;
-let items=[],selected=null,nextId=1,editing=false,tab='stickers',undoStack=[],redoStack=[],drag=null;
+let items=[],selected=null,nextId=1,editing=false,tab='stickers',undoStack=[],redoStack=[],drag=null,contentScale=1;
 const layer=document.createElement('div');layer.className='ls-canvas-layer';layer.setAttribute('aria-label','Editable letter contents');
 const ui=document.createElement('section');ui.className='ls-editor-shell';ui.setAttribute('aria-label','Paper editor');
 ui.innerHTML='<div class="ls-editor-topbar"><button class="ls-done-button" data-do="done">Done</button><div class="ls-document-title"><strong>Letter</strong><span>Editing locally</span></div><div class="ls-history-controls"><button data-do="undo" aria-label="Undo" title="Undo">↶</button><button data-do="redo" aria-label="Redo" title="Redo">↷</button></div></div><div class="ls-editor-panel" aria-live="polite"></div><nav class="ls-editor-dock" aria-label="Editor tools"><button class="ls-tool-button" data-tool="text"><span class="ls-tool-icon">T</span><span>Text</span></button><button class="ls-tool-button" data-tool="photo"><span class="ls-tool-icon ls-photo-icon">＋</span><span>Add photo</span></button><button class="ls-tool-button" data-tool="library"><span class="ls-tool-icon">✦</span><span>Library</span></button></nav>';
@@ -21,6 +21,8 @@ function chosen(){return items.find(o=>o.id===selected)||null;}
 function positionLayer(){
  if(!document.body.classList.contains('is-paper-fullscreen')){layer.style.display='none';layer.style.pointerEvents='none';return;}
  const r=surface.getBoundingClientRect();if(!r.width||!r.height)return;
+ contentScale=r.width/390;
+ layer.style.setProperty('--ls-content-scale',String(contentScale));
  Object.assign(layer.style,{display:'block',left:r.left+'px',top:r.top+'px',width:r.width+'px',height:r.height+'px',opacity:'1',pointerEvents:editing?'auto':'none'});draw();
 }
 function actionButton(op,label,title,o){
@@ -50,9 +52,9 @@ function draw(){
   Object.assign(el.style,{left:o.x*100+'%',top:o.y*100+'%',width:o.w*100+'%',height:o.h*100+'%',transform:'rotate('+o.rotation+'deg)',zIndex:String(o.id===selected?2000:i+1)});
   if(o.type==='text'||o.type==='sticker'){
    const c=document.createElement('div');c.className='ls-object-copy'+(o.type==='sticker'?' ls-sticker-copy':'');c.textContent=o.value;
-   Object.assign(c.style,{color:o.color,fontFamily:o.font,fontSize:o.size+'px',fontWeight:o.bold?'700':'400',fontStyle:o.italic?'italic':'normal',textAlign:o.align,justifyContent:'center'});el.append(c);
+   Object.assign(c.style,{color:o.color,fontFamily:o.font,fontSize:(o.size*contentScale)+'px',fontWeight:o.bold?'700':'400',fontStyle:o.italic?'italic':'normal',textAlign:o.align,justifyContent:'center'});el.append(c);
   }else if(o.type==='image'){const img=document.createElement('img');img.className='ls-object-photo';img.src=o.src;img.alt='Photo on letter';img.draggable=false;img.style.objectFit=o.fit;el.append(img);}
-  else if(o.type==='shape'){const sh=document.createElement('div');sh.className='ls-shape ls-shape-'+o.shape;sh.style.setProperty('--ls-shape-color',o.color);el.append(sh);}
+  else if(o.type==='shape'){const sh=document.createElement('div');sh.className='ls-shape ls-shape-'+o.shape;sh.style.setProperty('--ls-shape-color',o.color);const stroke=(o.shape==='circle'||o.shape==='corner')?3*contentScale:2*contentScale;sh.style.borderWidth=stroke+'px';sh.style.borderRadius=(3*contentScale)+'px';el.append(sh);}
   el.addEventListener('pointerdown',e=>{if(e.target.closest('.ls-object-action')||e.target.closest('.ls-resize-handle'))return;startDrag(e,o,'move');});
   el.addEventListener('click',e=>{e.stopPropagation();if(editing&&selected!==o.id){selected=o.id;draw();}});
   if(o.id===selected&&editing){
@@ -129,5 +131,6 @@ new MutationObserver(()=>{
  else window.setTimeout(positionLayer,860);
 }).observe(document.body,{attributes:true,attributeFilter:['class']});
 window.addEventListener('resize',()=>requestAnimationFrame(positionLayer));window.addEventListener('orientationchange',()=>setTimeout(positionLayer,120));
+ if(window.visualViewport){window.visualViewport.addEventListener('resize',()=>requestAnimationFrame(positionLayer));window.visualViewport.addEventListener('scroll',()=>requestAnimationFrame(positionLayer));}
 draw();histButtons();
 })();
