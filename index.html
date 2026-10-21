@@ -759,20 +759,20 @@
         fullscreenText.classList.remove('is-visible');
         fullscreenEdit.setAttribute('aria-expanded', 'false');
 
-        // Keep the original paper bounds captured on open. The sheet itself is fixed-size;
-        // only the editable content scrolls, so closing never compresses or reshapes the paper.
-        // Capture the in-flight visual position before cancelling an opening animation.
+        // Animate the real sheet to the exact screen rectangle it occupied before
+        // fullscreen. Avoid the older raised-then-settle sequence, which could leave
+        // the sheet offset when its SVG node was restored to the envelope.
         const currentPaperRect = paperSurface.getBoundingClientRect();
-        const raisedPaperRect = getRaisedPaperRect();
+        const targetPaperRect = normalPaperRect;
         if (activePaperAnimation) {
           activePaperAnimation.cancel();
           activePaperAnimation = null;
         }
 
         paperFullscreen.classList.add('is-closing');
-        const closingMotion = animatePaperBetweenRects(currentPaperRect, raisedPaperRect, 820);
+        const closingMotion = animatePaperBetweenRects(currentPaperRect, targetPaperRect, 820);
         window.setTimeout(() => {
-          // Ensure the upward animation's endpoint is committed before restoring the node.
+          // Commit the animation endpoint before restoring the original SVG parent.
           if (closingMotion.animation && activePaperAnimation === closingMotion.animation) {
             letterPaper.style.transform = closingMotion.targetTransform;
             closingMotion.animation.cancel();
@@ -787,22 +787,18 @@
           fullscreenClose.classList.remove('is-visible');
           fullscreenEdit.classList.remove('is-visible');
           restorePaperToEnvelope();
-          control.classList.add('is-returning');
+
+          // The group is back under its original SVG transforms. Its CSS open-state
+          // transform now matches targetPaperRect, so leave that native position alone.
           letterPaper.getBoundingClientRect();
           isPaperFullscreen = false;
           document.body.style.overflow = previousBodyOverflow;
 
           requestAnimationFrame(() => {
             letterPaper.style.transition = '';
+            letterPaper.style.transform = '';
             letterPaper.getBoundingClientRect();
-            control.classList.remove('is-returning');
-            control.classList.add('is-settling');
-            window.setTimeout(() => {
-              control.classList.remove('is-settling');
-              letterPaper.style.transform = '';
-              letterPaper.style.transition = '';
-              fullscreenAnimating = false;
-            }, 960);
+            fullscreenAnimating = false;
           });
         }, 850);
       }
