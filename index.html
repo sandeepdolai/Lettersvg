@@ -568,6 +568,7 @@
       let paperHomeParent = null;
       let paperHomeNextSibling = null;
       let normalPaperRect = null;
+      let raisedPaperRect = null;
       let paperLocalBox = null;
       let activePaperAnimation = null;
       const paperMotionEasing = 'cubic-bezier(.22, 1, .36, 1)';
@@ -587,20 +588,10 @@
         return { left: 0, top: 0, width: w, height: h };
       }
 
-      // The returned sheet's raised position is translateY(-450px); its
-      // normal open position is translateY(-250px). Convert the 200-unit
-      // difference through the envelope SVG's current screen matrix.
-      function getRaisedPaperRect() {
-        const matrix = art.getScreenCTM();
-        const yScale = matrix ? Math.hypot(matrix.c, matrix.d) : 1;
-        return {
-          left: normalPaperRect.left,
-          top: normalPaperRect.top - 200 * yScale,
-          width: normalPaperRect.width,
-          height: normalPaperRect.height
-        };
-      }
-
+      // The normal and raised positions are measured from the real SVG paper
+      // while it is still inside the envelope. Do not estimate CSS transform
+      // distances from the SVG viewBox scale; that can diverge from the browser's
+      // rendered position on different viewport sizes.
       function preparePaperResourcesForFullscreen() {
         // The real paper becomes a completely blank white canvas while fullscreen:
         // no grain, border, highlight, shadow, text, or photo elements. Removing SVG
@@ -726,17 +717,30 @@
           return;
         }
 
-        // Measure the settled open position without displaying this intermediate change.
+        // Measure both envelope positions from the actual paper group. This
+        // avoids estimating its raised screen position from SVG scale math.
+        // Transitions are disabled only for these synchronous measurements.
         const previousInlineTransform = letterPaper.style.transform;
         const previousInlineTransition = letterPaper.style.transition;
+        const wasReturning = control.classList.contains('is-returning');
+        const wasSettling = control.classList.contains('is-settling');
         letterPaper.style.transition = 'none';
-        letterPaper.style.transform = 'translateY(-250px) rotate(0deg) scale(1)';
-        // Store the original screen bounds of the whole paper group, because
-        // animatePaperBetweenRects maps the group's local bounding box (paperLocalBox),
-        // not just the white paper surface.
+        letterPaper.style.transform = '';
+        control.classList.remove('is-returning', 'is-settling');
         normalPaperRect = letterPaper.getBoundingClientRect();
+        control.classList.add('is-returning');
+        raisedPaperRect = letterPaper.getBoundingClientRect();
+        control.classList.toggle('is-returning', wasReturning);
+        control.classList.toggle('is-settling', wasSettling);
         letterPaper.style.transform = previousInlineTransform;
         letterPaper.style.transition = previousInlineTransition;
+        letterPaper.getBoundingClientRect();
+
+        if (!normalPaperRect.width || !normalPaperRect.height ||
+            !raisedPaperRect.width || !raisedPaperRect.height) {
+          fullscreenAnimating = false;
+          return;
+        }
 
         paperHomeParent = letterPaper.parentNode;
         paperHomeNextSibling = letterPaper.nextSibling;
@@ -781,7 +785,7 @@
         // position, then settle down into the open envelope. These rectangles must
         // describe the whole SVG paper group, matching paperLocalBox below.
         const currentPaperRect = letterPaper.getBoundingClientRect();
-        const targetPaperRect = getRaisedPaperRect();
+        const targetPaperRect = raisedPaperRect || normalPaperRect;
         if (activePaperAnimation) {
           activePaperAnimation.cancel();
           activePaperAnimation = null;
@@ -814,10 +818,9 @@
           isPaperFullscreen = false;
           document.body.style.overflow = previousBodyOverflow;
 
-          window.setTimeout(() => {
-            // Switching these classes animates from translateY(-450px) to
-            // translateY(-250px). Force style calculation so the transition starts
-            // consistently on mobile browsers too.
+          // Start the downward settle on the next frame. The prior implementation
+          // waited 790ms here, leaving the paper visibly paused at the raised point.
+          requestAnimationFrame(() => {
             control.classList.remove('is-returning');
             control.classList.add('is-settling');
             letterPaper.getBoundingClientRect();
@@ -829,7 +832,7 @@
               letterPaper.getBoundingClientRect();
               fullscreenAnimating = false;
             }, 980);
-          }, 790);
+          });
         }, 850);
       }
 
