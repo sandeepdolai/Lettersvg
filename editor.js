@@ -4,7 +4,7 @@ const fs=document.getElementById('paper-fullscreen'), surface=document.getElemen
 edit=document.getElementById('paper-fullscreen-edit'), close=document.getElementById('paper-fullscreen-close');
 if(!fs||!surface||!edit||!close)return;
 let items=[],selected=null,nextId=1,editing=false,tab='stickers',undoStack=[],redoStack=[],drag=null,contentScale=1,canvasWidth=390,canvasHeight=844,layoutGeometry=new Map();
-const layer=document.createElement('div');layer.className='ls-canvas-layer';layer.dataset.canvasSurface='paper-surface';layer.setAttribute('role','application');layer.setAttribute('aria-label','Paper canvas. Add text, photos, stickers, and layouts directly onto the letter paper.');
+const layer=document.createElement('div');layer.className='ls-canvas-layer';layer.setAttribute('aria-label','Editable letter contents');
 const ui=document.createElement('section');ui.className='ls-editor-shell';ui.setAttribute('aria-label','Paper editor');
 ui.innerHTML='<div class="ls-editor-topbar"><button class="ls-done-button" data-do="done">Done</button><div class="ls-document-title"><strong>Letter</strong><span>Editing locally</span></div><div class="ls-history-controls"><button data-do="undo" aria-label="Undo" title="Undo">↶</button><button data-do="redo" aria-label="Redo" title="Redo">↷</button></div></div><div class="ls-editor-panel" aria-live="polite"></div><nav class="ls-editor-dock" aria-label="Editor tools"><button class="ls-tool-button" data-tool="text"><span class="ls-tool-icon">T</span><span>Text</span></button><button class="ls-tool-button" data-tool="photo"><span class="ls-tool-icon ls-photo-icon">＋</span><span>Add photo</span></button><button class="ls-tool-button" data-tool="library"><span class="ls-tool-icon">✦</span><span>Library</span></button></nav>';
 fs.append(layer,ui);
@@ -19,24 +19,12 @@ function make(type,p){const o={id:nextId++,type,x:.16,y:.2,w:.68,h:.14,rotation:
 function add(o,saved){if(!saved)saveHistory();items.push(o);selected=o.id;draw();}
 function chosen(){return items.find(o=>o.id===selected)||null;}
 function positionLayer(){
- // The SVG paper surface is the single source of truth for the editor canvas.
- // Keep this overlay inside the fullscreen paper stage, mapped to the exact
- // on-screen bounds of #paper-surface; never create a second white artboard.
  if(!document.body.classList.contains('is-paper-fullscreen')){layer.style.display='none';layer.style.pointerEvents='none';return;}
- const r=surface.getBoundingClientRect(),stage=fs.getBoundingClientRect();if(!r.width||!r.height)return;
+ const r=surface.getBoundingClientRect();if(!r.width||!r.height)return;
  canvasWidth=r.width;canvasHeight=r.height;
- contentScale=Math.min(2.2,Math.max(.65,Math.sqrt((canvasWidth/390)*(canvasHeight/844))));
+  contentScale=Math.min(2.2,Math.max(.65,Math.sqrt((canvasWidth/390)*(canvasHeight/844))));
  layer.style.setProperty('--ls-content-scale',String(contentScale));
- Object.assign(layer.style,{
-  display:'block',
-  left:(r.left-stage.left)+'px',
-  top:(r.top-stage.top)+'px',
-  width:r.width+'px',
-  height:r.height+'px',
-  opacity:'1',
-  pointerEvents:editing?'auto':'none'
- });
- draw();
+ Object.assign(layer.style,{display:'block',left:r.left+'px',top:r.top+'px',width:r.width+'px',height:r.height+'px',opacity:'1',pointerEvents:editing?'auto':'none'});draw();
 }
 function actionButton(op,label,title,o){
  const b=document.createElement('button');b.type='button';b.className='ls-object-action';b.dataset.op=op;b.textContent=label;b.title=title;b.setAttribute('aria-label',title);
