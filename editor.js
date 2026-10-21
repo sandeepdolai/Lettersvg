@@ -70,9 +70,9 @@ function startDrag(e,o,mode){
 }
 document.addEventListener('pointermove',e=>{
  if(!drag)return;const o=items.find(x=>x.id===drag.id);if(!o)return;const dx=e.clientX-drag.sx,dy=e.clientY-drag.sy;
- if(drag.mode==='move'){o.x=Math.max(0,Math.min(1-drag.w,drag.x+dx/drag.rw));o.y=Math.max(0,Math.min(1-drag.h,drag.y+dy/drag.rh));}
- else if(o.type==='image'){const ratio=drag.pw/Math.max(1,drag.ph);let w=Math.max(54,drag.pw+dx),h=Math.max(48,drag.ph+dy);if(Math.abs(dx)>=Math.abs(dy))h=w/ratio;else w=h*ratio;o.w=Math.min(1-drag.x,w/drag.rw);o.h=Math.min(1-drag.y,h/drag.rh);}
- else{o.w=Math.min(1-drag.x,Math.max(.1,drag.w+dx/drag.rw));o.h=Math.min(1-drag.y,Math.max(.05,drag.h+dy/drag.rh));}
+ if(drag.mode==='move'){o.x=Math.max(0,Math.min(1-drag.w,drag.x+dx/drag.rw));o.y=Math.max(0,drag.y+dy/drag.rh);}
+ else if(o.type==='image'){const ratio=drag.pw/Math.max(1,drag.ph);let w=Math.max(54,drag.pw+dx),h=Math.max(48,drag.ph+dy);if(Math.abs(dx)>=Math.abs(dy))h=w/ratio;else w=h*ratio;o.w=Math.min(1-drag.x,w/drag.rw);o.h=Math.max(.04,h/drag.rh);}
+ else{o.w=Math.min(1-drag.x,Math.max(.1,drag.w+dx/drag.rw));o.h=Math.max(.05,drag.h+dy/drag.rh);}
  draw();
 });
 document.addEventListener('pointerup',()=>drag=null);document.addEventListener('pointercancel',()=>drag=null);
@@ -187,7 +187,7 @@ function applyText(){
  const input=panel.querySelector('.ls-text-input');if(!input)return;const value=input.value.trim(),existing=chosen();
  if(existing&&existing.type==='text'){existing.value=input.value;hidePanel();draw();return;}
  if(!value){input.placeholder='Type a message first…';input.focus();return;}
- add(make('text',{value:input.value,color:panel.querySelector('[data-color].is-picked')?.dataset.color||'#282322',size:Number(panel.querySelector('.ls-size-input').value||30),font:panel.querySelector('.ls-font-select').value,x:.1,y:.2,w:.8,h:.22,bold:!!panel.querySelector('[data-format="bold"].is-on'),italic:!!panel.querySelector('[data-format="italic"].is-on'),align:panel.querySelector('[data-align].is-on')?.dataset.align||'center'}));hidePanel();
+ add(make('text',{value:input.value,color:panel.querySelector('[data-color].is-picked')?.dataset.color||'#282322',size:Number(panel.querySelector('.ls-size-input').value||30),font:panel.querySelector('.ls-font-select').value,x:.08,y:nextFlowY(),w:.84,h:.08,bold:!!panel.querySelector('[data-format="bold"].is-on'),italic:!!panel.querySelector('[data-format="italic"].is-on'),align:panel.querySelector('[data-align].is-on')?.dataset.align||'center'}));hidePanel();
 }
 function choosePhoto(){hidePanel();file.value='';file.click();}
 file.addEventListener('change',()=>{
