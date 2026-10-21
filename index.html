@@ -480,6 +480,11 @@
           <g class="letter-paper" id="letter-paper">
             <rect class="letter-shadow" x="365" y="90" width="803" height="690" rx="13" fill="#3b0808" filter="url(#paper-shadow)"/>
             <rect id="paper-surface" x="365" y="90" width="803" height="690" rx="13" fill="url(#paper)" stroke="#d8c8c1" stroke-width="2" filter="url(#grain)"/>
+            <foreignObject id="paper-editor-foreign" x="365" y="90" width="803" height="690" overflow="hidden">
+              <div xmlns="http://www.w3.org/1999/xhtml" id="paper-page-viewport" class="ls-canvas-layer" aria-label="Editable page viewport">
+                <div id="paper-page-content" class="ls-site-page" aria-label="Website page canvas"></div>
+              </div>
+            </foreignObject>
             <path class="paper-edge-highlight" d="M378 104H1155" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="2"/>
           </g>
         </g>
@@ -550,6 +555,8 @@
       const originalPaperFill = paperSurface.getAttribute('fill');
       const originalPaperFilter = paperSurface.getAttribute('filter');
       const originalPaperStroke = paperSurface.getAttribute('stroke');
+      const originalPaperHeight = paperSurface.getAttribute('height');
+      const originalShadowHeight = letterShadow.getAttribute('height');
       const originalShadowFilter = letterShadow.getAttribute('filter');
       const paperFullscreen = document.getElementById('paper-fullscreen');
       const fullscreenArt = document.getElementById('fullscreen-art');
@@ -677,6 +684,9 @@
 
       function restorePaperToEnvelope() {
         if (!paperHomeParent) return;
+        // Restore the original stationery dimensions after the page return animation.
+        paperSurface.setAttribute('height', originalPaperHeight);
+        letterShadow.setAttribute('height', originalShadowHeight);
         letterPaper.classList.remove('is-in-fullscreen');
         letterPaper.style.transition = 'none';
         letterPaper.style.transform = '';
@@ -750,6 +760,8 @@
         fullscreenText.classList.remove('is-visible');
         fullscreenEdit.setAttribute('aria-expanded', 'false');
 
+        // Update the transform box to include the page's expanded height.
+        paperLocalBox = letterPaper.getBBox();
         // Capture the in-flight visual position before cancelling an opening animation.
         const currentPaperRect = paperSurface.getBoundingClientRect();
         const raisedPaperRect = getRaisedPaperRect();
