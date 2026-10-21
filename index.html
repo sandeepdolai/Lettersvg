@@ -572,20 +572,13 @@
         fullscreenArt.setAttribute('viewBox', `0 0 ${w} ${h}`);
       }
 
-      // Fit the real sheet inside the viewport using one uniform scale. The
-      // white backdrop hides the envelope while preserving the paper's proportions.
+      // The editing canvas is a responsive viewport, not a fixed-ratio sheet.
+      // Fill the available device viewport so the paper and its editable content
+      // can adapt to portrait phones, landscape phones, tablets, and desktops.
       function getContainedFullscreenRect() {
         const w = window.innerWidth || document.documentElement.clientWidth;
         const h = window.innerHeight || document.documentElement.clientHeight;
-        const scale = Math.min(w / paperLocalBox.width, h / paperLocalBox.height);
-        const width = paperLocalBox.width * scale;
-        const height = paperLocalBox.height * scale;
-        return {
-          left: (w - width) / 2,
-          top: (h - height) / 2,
-          width,
-          height
-        };
+        return { left: 0, top: 0, width: w, height: h };
       }
 
       // The returned sheet's raised position is translateY(-450px); its
