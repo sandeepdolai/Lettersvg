@@ -793,10 +793,16 @@
 
         paperFullscreen.classList.add('is-closing');
         const closingMotion = animatePaperBetweenRects(currentPaperRect, targetPaperRect, 820);
-        window.setTimeout(() => {
-          // Commit the animation endpoint before restoring the original SVG parent.
+
+        // Chain the envelope settle directly to completion of the main close
+        // animation. This avoids timer drift and never leaves the paper parked
+        // at the raised position waiting for a second timeout.
+        closingMotion.finished.then(() => {
+          if (!isPaperFullscreen || !fullscreenAnimating) return;
+
+          // Persist the measured raised endpoint before changing SVG coordinate systems.
+          letterPaper.style.transform = closingMotion.targetTransform;
           if (closingMotion.animation && activePaperAnimation === closingMotion.animation) {
-            letterPaper.style.transform = closingMotion.targetTransform;
             closingMotion.animation.cancel();
             activePaperAnimation = null;
           }
@@ -808,32 +814,69 @@
           fullscreenClose.style.display = '';
           fullscreenClose.classList.remove('is-visible');
           fullscreenEdit.classList.remove('is-visible');
-          // Restore the same SVG paper in its raised envelope position, then let
-          // the envelope's native transform transition carry it down into its final
-          // resting position. Keep this second motion in the original SVG's coordinate
-          // system; the fullscreen screen-space matrix is not valid after reparenting.
+
+          // Restore the same paper node at the raised envelope position.
+          // The downward move below uses Web Animations directly on this restored
+          // SVG node, so it does not depend on a CSS class transition restarting.
           control.classList.add('is-returning');
           restorePaperToEnvelope();
-          letterPaper.getBoundingClientRect(); // Commit the raised start position.
+          letterPaper.getBoundingClientRect();
           isPaperFullscreen = false;
           document.body.style.overflow = previousBodyOverflow;
 
-          // Start the downward settle on the next frame. The prior implementation
-          // waited 790ms here, leaving the paper visibly paused at the raised point.
-          requestAnimationFrame(() => {
-            control.classList.remove('is-returning');
-            control.classList.add('is-settling');
-            letterPaper.getBoundingClientRect();
+          const prefersReducedMotion = window.matchMedia &&
+            window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+          const settleDuration = prefersReducedMotion ? 1 : 920;
+          const settleFrom = window.getComputedStyle(letterPaper).transform;
+          const settleTo = 'translateY(-250px) rotate(0deg) scale(1)';
 
+          if (typeof letterPaper.animate === 'function') {
+            const settleAnimation = letterPaper.animate(
+              [{ transform: settleFrom }, { transform: settleTo }],
+              {
+                duration: settleDuration,
+                easing: paperMotionEasing,
+                fill: 'forwards'
+              }
+            );
+            activePaperAnimation = settleAnimation;
+            settleAnimation.finished.then(() => {
+              if (activePaperAnimation !== settleAnimation) return;
+
+              // Remove the temporary raised state while the animation is still
+              // holding the exact resting transform, then release the animation.
+              control.classList.remove('is-returning', 'is-settling');
+              letterPaper.style.transition = '';
+              letterPaper.style.transform = '';
+              settleAnimation.cancel();
+              activePaperAnimation = null;
+              letterPaper.getBoundingClientRect();
+              fullscreenAnimating = false;
+            }).catch(() => {
+              // A cancelled animation must not overwrite a newer paper animation.
+            });
+            return;
+          }
+
+          // Older-browser fallback: transition an explicit inline transform instead
+          // of relying on selector/class transition timing.
+          letterPaper.style.transform = settleFrom;
+          letterPaper.style.transition = `transform ${settleDuration}ms ${paperMotionEasing}`;
+          letterPaper.getBoundingClientRect();
+          requestAnimationFrame(() => {
+            letterPaper.style.transform = settleTo;
             window.setTimeout(() => {
-              control.classList.remove('is-settling');
+              control.classList.remove('is-returning', 'is-settling');
               letterPaper.style.transition = '';
               letterPaper.style.transform = '';
               letterPaper.getBoundingClientRect();
               fullscreenAnimating = false;
-            }, 980);
+            }, settleDuration + 60);
           });
-        }, 850);
+        }).catch(() => {
+          // Keep the close path resilient if a browser rejects an animation promise.
+          fullscreenAnimating = false;
+        });
       }
 
       // The paper is a separate interaction: tapping it must not close the envelope.
