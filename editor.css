@@ -30,8 +30,8 @@
 
 /* Keep page artwork and typography proportional to the responsive paper rectangle. */
 .ls-editor-panel { max-height: min(49dvh, 470px); }
-.ls-object-action { min-width: max(30px, calc(28px * var(--ls-content-scale, 1))); height: max(30px, calc(27px * var(--ls-content-scale, 1))); }
-.ls-resize-handle { width: max(16px, calc(15px * var(--ls-content-scale, 1))); height: max(16px, calc(15px * var(--ls-content-scale, 1))); }
+.ls-object-action { min-width: 30px; height: 30px; }
+.ls-resize-handle { width: 16px; height: 16px; }
 @media (max-width: 560px) {
   .ls-editor-topbar { top: max(8px, env(safe-area-inset-top)); }
   .ls-document-title strong { font-size: 13px; }
