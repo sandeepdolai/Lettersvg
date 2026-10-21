@@ -7,15 +7,21 @@ letterPaper=document.getElementById('letter-paper'), paperShadow=letterPaper&&le
 if(!fs||!surface||!edit||!close||!layer||!page||!letterPaper||!paperShadow)return;
 const originalSurfaceHeight=Number(surface.getAttribute('height'))||690;
 const originalShadowHeight=Number(paperShadow.getAttribute('height'))||originalSurfaceHeight;
-let items=[],selected=null,nextId=1,editing=false,websiteMode=false,tab='stickers',undoStack=[],redoStack=[],drag=null,contentScale=1,canvasWidth=390,canvasHeight=844,layoutGeometry=new Map();
+let items=[],selected=null,nextId=1,editing=false,websiteMode=false,drawingMode=false,selectedBrush='marker',drawColor='#ed1763',strokes=[],activeStroke=null,activeStrokePath=null,activePointerId=null,tab='stickers',undoStack=[],redoStack=[],drag=null,contentScale=1,canvasWidth=390,canvasHeight=844,layoutGeometry=new Map();
 const ui=document.createElement('section');ui.className='ls-editor-shell';ui.setAttribute('aria-label','Paper editor');
-ui.innerHTML='<div class="ls-editor-topbar" aria-label="Editor controls"><button class="ls-icon-button ls-close-button" data-do="exit" aria-label="Close editor" title="Close editor"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5 19 19M19 5 5 19"/></svg></button><button class="ls-icon-button ls-undo-button" data-do="undo" aria-label="Undo" title="Undo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14 4 9l5-5M4 9h9a6 6 0 0 1 0 12h-2"/></svg></button><span class="ls-topbar-spacer"></span><button class="ls-icon-button ls-more-button" data-do="more" aria-label="More options" aria-expanded="false" title="More options"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg></button><button class="ls-next-button" data-do="next" disabled>Next</button></div><div class="ls-more-menu" aria-label="More options"><button data-do="redo"><span>Redo</span><span class="ls-menu-shortcut">↷</span></button><button data-do="library"><span>Library</span><span class="ls-menu-shortcut">✦</span></button><button data-do="layouts"><span>Premade layouts</span><span class="ls-menu-shortcut">▤</span></button></div><div class="ls-editor-panel" aria-live="polite"></div><nav class="ls-editor-dock" aria-label="Editor tools"><button class="ls-tool-button ls-wave-button" data-tool="library" aria-label="Library" title="Library"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M3 23c4-8 7-13 10-13 5 0-4 18-1 18 2 0 9-17 13-17 5 0-4 19-1 19 3 0 7-8 13-15M4 31c4-5 7-7 10-7"/></svg></button><button class="ls-tool-button ls-text-button" data-tool="text" aria-label="Text" title="Text"><span class="ls-letter-a">A</span></button><button class="ls-tool-button ls-plus-button" data-do="quick-add" aria-label="Add to page" title="Add to page"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M20 5v30M5 20h30"/></svg></button><button class="ls-tool-button ls-photo-button" data-tool="photo" aria-label="Add photo" title="Add photo"><svg viewBox="0 0 40 40" aria-hidden="true"><rect x="3.5" y="5.5" width="33" height="29" rx="4"/><circle cx="13" cy="14" r="3"/><path d="m5 29 9-8 7 6 5-5 9 9"/></svg></button><button class="ls-tool-button ls-camera-button" data-tool="camera" aria-label="Take a photo" title="Take a photo"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M5 12h7l3-5h10l3 5h7a3 3 0 0 1 3 3v17a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3V15a3 3 0 0 1 3-3Z"/><circle cx="20" cy="23" r="8"/><circle cx="20" cy="23" r="4.5"/></svg></button></nav>';
+ui.innerHTML='<div class="ls-editor-topbar" aria-label="Editor controls"><button class="ls-icon-button ls-close-button" data-do="exit" aria-label="Close editor" title="Close editor"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5 19 19M19 5 5 19"/></svg></button><button class="ls-icon-button ls-undo-button" data-do="undo" aria-label="Undo" title="Undo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14 4 9l5-5M4 9h9a6 6 0 0 1 0 12h-2"/></svg></button><span class="ls-topbar-spacer"></span><button class="ls-icon-button ls-more-button" data-do="more" aria-label="More options" aria-expanded="false" title="More options"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg></button><button class="ls-next-button" data-do="next" disabled>Next</button></div><div class="ls-more-menu" aria-label="More options"><button data-do="redo"><span>Redo</span><span class="ls-menu-shortcut">↷</span></button><button data-do="library"><span>Library</span><span class="ls-menu-shortcut">✦</span></button><button data-do="layouts"><span>Premade layouts</span><span class="ls-menu-shortcut">▤</span></button></div><div class="ls-editor-panel" aria-live="polite"></div><nav class="ls-editor-dock" aria-label="Editor tools"><button class="ls-tool-button ls-wave-button" data-tool="draw" aria-label="Draw" title="Draw"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M3 23c4-8 7-13 10-13 5 0-4 18-1 18 2 0 9-17 13-17 5 0-4 19-1 19 3 0 7-8 13-15M4 31c4-5 7-7 10-7"/></svg></button><button class="ls-tool-button ls-text-button" data-tool="text" aria-label="Text" title="Text"><span class="ls-letter-a">A</span></button><button class="ls-tool-button ls-plus-button" data-do="quick-add" aria-label="Add to page" title="Add to page"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M20 5v30M5 20h30"/></svg></button><button class="ls-tool-button ls-photo-button" data-tool="photo" aria-label="Add photo" title="Add photo"><svg viewBox="0 0 40 40" aria-hidden="true"><rect x="3.5" y="5.5" width="33" height="29" rx="4"/><circle cx="13" cy="14" r="3"/><path d="m5 29 9-8 7 6 5-5 9 9"/></svg></button><button class="ls-tool-button ls-camera-button" data-tool="camera" aria-label="Take a photo" title="Take a photo"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M5 12h7l3-5h10l3 5h7a3 3 0 0 1 3 3v17a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3V15a3 3 0 0 1 3-3Z"/><circle cx="20" cy="23" r="8"/><circle cx="20" cy="23" r="4.5"/></svg></button></nav>';
 fs.append(ui);
+ui.insertAdjacentHTML('beforeend','<nav class="ls-drawing-dock" aria-label="Drawing tools"><button class="ls-draw-undo" data-draw-action="undo" aria-label="Undo stroke" title="Undo stroke" disabled><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M16 11 7 20l9 9M8 20h14a9 9 0 0 1 0 18h-3"/></svg></button><div class="ls-brush-track" role="group" aria-label="Brush type"><button class="ls-brush-option" data-brush="pen" aria-label="Pen" title="Pen"><svg viewBox="0 0 44 92" aria-hidden="true"><path d="M17 5 22 1l5 4 4 17H13Z" fill="#111"/><path d="M13 22h18l4 8v48H9V30Z" fill="#050505"/><path d="M9 78h26l-5 9H14Z" fill="#111"/></svg></button><button class="ls-brush-option is-picked" data-brush="marker" aria-label="Marker" title="Marker"><svg viewBox="0 0 44 92" aria-hidden="true"><path d="M12 12Q12 4 22 2Q32 4 32 12L35 22H9Z" fill="#3e3e3e"/><path d="M10 23h24l3 10-2 43H9L7 33Z" fill="#555"/><path d="M9 44h26M9 76h26" fill="none" stroke="#f1f1f1" stroke-width="2"/><path d="M11 80h22l-6 9H17Z" fill="#3f3f3f"/></svg></button><button class="ls-brush-option" data-brush="pencil" aria-label="Pencil" title="Pencil"><svg viewBox="0 0 44 92" aria-hidden="true"><path d="M16 10 22 2 28 10 32 78 22 90 12 78Z" fill="#777"/><path d="M16 10h12M13 76h18" stroke="#eee" stroke-width="2"/><path d="M22 90 18 84h8Z" fill="#222"/></svg></button><button class="ls-brush-option" data-brush="brush" aria-label="Brush" title="Brush"><svg viewBox="0 0 44 92" aria-hidden="true"><path d="M21 4 35 16 22 34 9 21Z" fill="#494949"/><path d="M10 20 28 37 21 66 14 83 7 65Z" fill="#555"/><path d="M8 65h15l-3 17-4 7-4-7Z" fill="#171717"/></svg></button><button class="ls-brush-option" data-brush="eraser" aria-label="Eraser" title="Eraser"><svg viewBox="0 0 44 92" aria-hidden="true"><path d="m9 22 14-15 14 14-14 15Z" fill="#777"/><path d="m9 22 14 14-8 8L2 30Z" fill="#b9b9b9"/><path d="M10 45h24M12 49h20" stroke="#555" stroke-width="2"/><path d="M16 51h12v35H16Z" fill="#4a4a4a"/><path d="M19 54v28m6-28v28" stroke="#eee" stroke-width="2"/></svg></button></div><button class="ls-draw-color" data-draw-action="color" aria-label="Choose ink color" title="Choose ink color"><span></span></button></nav>');
 const panel=ui.querySelector('.ls-editor-panel'),file=document.createElement('input');
+const svgNS='http://www.w3.org/2000/svg';
+const inkLayer=document.createElementNS(svgNS,'svg');
+inkLayer.setAttribute('class','ls-ink-layer');
+inkLayer.setAttribute('aria-label','Freehand drawing');
+inkLayer.setAttribute('preserveAspectRatio','none');
 file.type='file';file.accept='image/*';file.multiple=true;file.className='ls-file-input';file.tabIndex=-1;file.setAttribute('aria-label','Choose photos from your device');ui.append(file);
 const clone=a=>JSON.parse(JSON.stringify(a));
 function saveHistory(){undoStack.push(clone(items));if(undoStack.length>30)undoStack.shift();redoStack=[];histButtons();}
-function histButtons(){const u=ui.querySelector('[data-do="undo"]'),r=ui.querySelector('[data-do="redo"]'),n=ui.querySelector('[data-do="next"]');if(u)u.disabled=!undoStack.length;if(r)r.disabled=!redoStack.length;if(n)n.disabled=items.length===0;}
+function histButtons(){const u=ui.querySelector('[data-do="undo"]'),r=ui.querySelector('[data-do="redo"]'),n=ui.querySelector('[data-do="next"]');if(u)u.disabled=!undoStack.length;if(r)r.disabled=!redoStack.length;if(n)n.disabled=drawingMode?false:items.length===0;updateDrawingControls();}
 function undo(){if(!undoStack.length)return;redoStack.push(clone(items));items=undoStack.pop();selected=null;draw();histButtons();}
 function redo(){if(!redoStack.length)return;undoStack.push(clone(items));items=redoStack.pop();selected=null;draw();histButtons();}
 function make(type,p){const o={id:nextId++,type,x:.16,y:.2,w:.68,h:.14,rotation:0,value:'',color:'#282322',font:'Arial, Helvetica, sans-serif',size:30,bold:false,italic:false,align:'center',fit:'contain',shape:'',src:''};Object.assign(o,p||{});return o;}
@@ -27,6 +33,48 @@ function nextFlowY(){
  return bottom+Math.max(.035,24/Math.max(1,canvasHeight));
 }
 function chosen(){return items.find(o=>o.id===selected)||null;}
+const brushWidths={pen:2.5,marker:8,pencil:3.5,brush:11,eraser:28};
+function updateDrawingControls(){
+ const undoButton=ui.querySelector('.ls-draw-undo');if(undoButton)undoButton.disabled=strokes.length===0;
+ ui.querySelectorAll('[data-brush]').forEach(b=>b.classList.toggle('is-picked',b.dataset.brush===selectedBrush));
+ const colorButton=ui.querySelector('.ls-draw-color');if(colorButton){colorButton.style.setProperty('--ls-ink-color',drawColor);colorButton.setAttribute('aria-label','Choose ink color, current '+drawColor);}
+}
+function strokePathData(stroke){
+ const points=stroke.points||[];
+ return points.map((p,i)=>{const x=p.x*canvasWidth,y=p.y*canvasHeight;return (i?'L':'M')+x.toFixed(2)+' '+y.toFixed(2);}).join(' ');
+}
+function makeInkPath(stroke){
+ const path=document.createElementNS(svgNS,'path');path.setAttribute('d',strokePathData(stroke));path.setAttribute('fill','none');path.setAttribute('stroke',stroke.color);path.setAttribute('stroke-width',String(stroke.width));path.setAttribute('stroke-linecap','round');path.setAttribute('stroke-linejoin','round');path.setAttribute('vector-effect','non-scaling-stroke');return path;
+}
+function renderInkLayer(documentHeight){
+ inkLayer.replaceChildren();inkLayer.setAttribute('viewBox','0 0 '+Math.max(1,canvasWidth)+' '+Math.max(1,documentHeight));inkLayer.setAttribute('width',String(Math.max(1,canvasWidth)));inkLayer.setAttribute('height',String(Math.max(1,documentHeight)));
+ strokes.forEach(stroke=>inkLayer.append(makeInkPath(stroke)));Object.assign(inkLayer.style,{pointerEvents:drawingMode?'auto':'none',touchAction:'none'});page.append(inkLayer);updateDrawingControls();
+}
+function inkPointFromEvent(e){
+ const rect=inkLayer.getBoundingClientRect(),docHeight=Math.max(1,parseFloat(page.style.height)||canvasHeight),sx=canvasWidth/Math.max(1,rect.width),sy=docHeight/Math.max(1,rect.height);
+ return {x:Math.max(0,Math.min(1,(e.clientX-rect.left)*sx/Math.max(1,canvasWidth))),y:Math.max(0,Math.min(1.5,(e.clientY-rect.top)*sy/Math.max(1,canvasHeight)))};
+}
+function startInk(e){
+ if(!drawingMode||(e.button!==0&&e.pointerType==='mouse'))return;e.preventDefault();e.stopPropagation();
+ const p=inkPointFromEvent(e),erasing=selectedBrush==='eraser';activeStroke={color:erasing?'#f7f7f7':drawColor,width:brushWidths[selectedBrush]||4,brush:selectedBrush,points:[p]};strokes.push(activeStroke);activeStrokePath=makeInkPath(activeStroke);inkLayer.append(activeStrokePath);activePointerId=e.pointerId;try{inkLayer.setPointerCapture(e.pointerId);}catch(_){}updateDrawingControls();
+}
+function moveInk(e){
+ if(!drawingMode||!activeStroke||e.pointerId!==activePointerId)return;e.preventDefault();const p=inkPointFromEvent(e),last=activeStroke.points[activeStroke.points.length-1],dx=p.x-last.x,dy=p.y-last.y;if(dx*dx+dy*dy<0.000002)return;activeStroke.points.push(p);activeStrokePath.setAttribute('d',strokePathData(activeStroke));
+}
+function finishInk(e){if(!activeStroke||(e&&e.pointerId!==activePointerId))return;activeStroke=null;activeStrokePath=null;activePointerId=null;updateDrawingControls();}
+function undoInk(){if(!strokes.length)return;strokes.pop();activeStroke=null;activeStrokePath=null;activePointerId=null;draw();}
+function chooseInkColor(){
+ panel.innerHTML='<div class="ls-panel-header"><div><h3>Ink color</h3><p>Choose a color for your next stroke</p></div><button class="ls-panel-close" data-do="close-panel" aria-label="Close panel">×</button></div><div class="ls-draw-color-grid">'+[['#111111','Black'],['#ed1763','Pink'],['#d92e36','Red'],['#e18a31','Orange'],['#d7ae20','Yellow'],['#39845c','Green'],['#347bc4','Blue'],['#8a56bb','Purple'],['#7d7d7d','Grey'],['#f7f7f7','White']].map(c=>'<button data-draw-color="'+c[0]+'" aria-label="'+c[1]+'" title="'+c[1]+'" style="--swatch:'+c[0]+'" class="'+(drawColor===c[0]?'is-picked':'')+'"></button>').join('')+'</div>';showPanel();
+}
+function enterDrawingMode(){
+ if(!editing||!document.body.classList.contains('is-paper-fullscreen'))return;drawingMode=true;selected=null;panel.classList.remove('is-open');setMoreMenu(false);ui.classList.add('is-drawing-mode');document.body.classList.add('is-paper-drawing-mode');
+ const next=ui.querySelector('[data-do="next"]');if(next){next.textContent='Done';next.disabled=false;}layer.style.overflowY='hidden';layer.style.touchAction='none';layer.style.pointerEvents='auto';layer.scrollTop=0;draw();updateDrawingControls();
+ requestAnimationFrame(()=>{positionLayer();layer.style.overflowY='hidden';layer.style.touchAction='none';layer.style.pointerEvents='auto';});
+}
+function exitDrawingMode(){
+ if(!drawingMode)return;finishInk();drawingMode=false;panel.classList.remove('is-open');ui.classList.remove('is-drawing-mode');document.body.classList.remove('is-paper-drawing-mode');layer.style.overflowY='auto';layer.style.touchAction='pan-y';layer.style.pointerEvents=(editing||websiteMode)?'auto':'none';
+ const next=ui.querySelector('[data-do="next"]');if(next)next.textContent='Next';draw();histButtons();
+}
 function syncPaperSurfaceHeight(){
  // Keep the SVG sheet and its shadow at their original dimensions.
  // Longer page content scrolls inside the paper's embedded viewport instead.
@@ -176,10 +224,13 @@ function measureTextHeight(o,widthPx){
  layoutGeometry.forEach(g=>{bottom=Math.max(bottom,(g.y+g.h)*canvasHeight);});
  const documentHeight=Math.max(canvasHeight,Math.ceil(bottom+24));
  page.style.height=documentHeight+'px';
+ renderInkLayer(documentHeight);
  syncPaperSurfaceHeight(documentHeight);
  histButtons();
 }
 
+inkLayer.addEventListener('pointerdown',startInk);
+document.addEventListener('pointermove',moveInk,{passive:false});document.addEventListener('pointerup',finishInk);document.addEventListener('pointercancel',finishInk);
 page.addEventListener('pointerdown',e=>{if(e.target===page&&editing){selected=null;draw();}});
 function openEditor(){if(!document.body.classList.contains('is-paper-fullscreen'))return;editing=true;websiteMode=true;document.body.classList.add('is-paper-editor-active');ui.classList.add('is-active');edit.classList.remove('is-visible');const old=document.getElementById('paper-fullscreen-text');if(old)old.classList.remove('is-visible');positionLayer();draw();}
 function done(){editing=false;panel.classList.remove('is-open');ui.classList.remove('is-active');document.body.classList.remove('is-paper-editor-active');setMoreMenu(false);edit.classList.add('is-visible');layer.style.pointerEvents=websiteMode?'auto':'none';draw();}
@@ -259,10 +310,13 @@ function libraryAdd(name){
  if(stickers[name]){const s=stickers[name];add(make('sticker',{value:s[0],color:s[1],size:64,x:.36,y:nextFlowY(),w:.28,h:.2}));}
 }
 ui.addEventListener('click',e=>{
- const tool=e.target.closest('[data-tool]');if(tool){if(tool.dataset.tool==='text')textPanel();else if(tool.dataset.tool==='photo')choosePhoto(false);else if(tool.dataset.tool==='camera')choosePhoto(true);else libraryPanel('stickers');return;}
+ const brush=e.target.closest('[data-brush]');if(brush){selectedBrush=brush.dataset.brush;updateDrawingControls();return;}
+ const drawAction=e.target.closest('[data-draw-action]');if(drawAction){const v=drawAction.dataset.drawAction;if(v==='undo')undoInk();else if(v==='color')chooseInkColor();return;}
+ const drawColorChoice=e.target.closest('[data-draw-color]');if(drawColorChoice){drawColor=drawColorChoice.dataset.drawColor;hidePanel();updateDrawingControls();return;}
+ const tool=e.target.closest('[data-tool]');if(tool){if(tool.dataset.tool==='draw')enterDrawingMode();else if(tool.dataset.tool==='text')textPanel();else if(tool.dataset.tool==='photo')choosePhoto(false);else if(tool.dataset.tool==='camera')choosePhoto(true);else libraryPanel('stickers');return;}
  const action=e.target.closest('[data-do]');if(action){const v=action.dataset.do;
-  if(v==='exit'){close.click();}
-  else if(v==='next'||v==='done')done();
+  if(v==='exit'){if(drawingMode)exitDrawingMode();else close.click();}
+  else if(v==='next'||v==='done'){if(drawingMode)exitDrawingMode();else done();}
   else if(v==='undo')undo();
   else if(v==='redo') {setMoreMenu(false);redo();}
   else if(v==='more'){hidePanel();setMoreMenu(!ui.querySelector('.ls-more-menu').classList.contains('is-open'));}
@@ -281,11 +335,11 @@ ui.addEventListener('click',e=>{
  const item=e.target.closest('[data-lib-add]');if(item)libraryAdd(item.dataset.libAdd);
 });
 edit.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();openEditor();},true);
-close.addEventListener('click',()=>{editing=false;websiteMode=false;document.body.classList.remove('is-paper-editor-active');ui.classList.remove('is-active');panel.classList.remove('is-open');setMoreMenu(false);layer.style.pointerEvents='none';},true);
+close.addEventListener('click',()=>{editing=false;websiteMode=false;drawingMode=false;document.body.classList.remove('is-paper-editor-active','is-paper-drawing-mode');ui.classList.remove('is-active','is-drawing-mode');panel.classList.remove('is-open');setMoreMenu(false);layer.style.overflowY='auto';layer.style.touchAction='pan-y';layer.style.pointerEvents='none';draw();},true);
 new MutationObserver(()=>{
  if(!document.body.classList.contains('is-paper-fullscreen')){
-  editing=false;websiteMode=false;document.body.classList.remove('is-paper-editor-active');ui.classList.remove('is-active');panel.classList.remove('is-open');setMoreMenu(false);
-  layer.style.pointerEvents='none';
+  editing=false;websiteMode=false;drawingMode=false;document.body.classList.remove('is-paper-editor-active','is-paper-drawing-mode');ui.classList.remove('is-active','is-drawing-mode');panel.classList.remove('is-open');setMoreMenu(false);
+  layer.style.overflowY='auto';layer.style.touchAction='pan-y';layer.style.pointerEvents='none';
   page.style.height='';page.style.transform='';page.style.width='';
   resetPaperSurfaceHeight();
   positionLayer();
