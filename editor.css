@@ -400,3 +400,63 @@ body.is-paper-drawing-mode #paper-page-content::before {
 body.is-paper-drawing-mode .ls-ink-layer {
   clip-path: inset(clamp(80px, 11vh, 160px) 8px clamp(120px, 11vh, 170px) 8px round 34px);
 }
+
+
+/* Vertical brush-size slider shown at the paper's right edge while drawing. */
+.ls-brush-size-control {
+  position: fixed;
+  z-index: 2147483647;
+  top: 37%;
+  right: -27px;
+  display: none;
+  width: 56px;
+  height: clamp(280px, 30vh, 460px);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  cursor: ns-resize;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  pointer-events: auto;
+}
+.ls-editor-shell.is-drawing-mode .ls-brush-size-control { display: block; }
+.ls-brush-size-track {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 14px;
+  transform: translateX(-50%);
+  border: 1.5px solid #969691;
+  border-radius: 12px;
+  background: rgba(255,255,255,.36);
+  pointer-events: none;
+}
+.ls-brush-size-knob {
+  position: absolute;
+  z-index: 1;
+  top: var(--ls-brush-size-position, 50%);
+  left: 50%;
+  width: 58px;
+  height: 58px;
+  transform: translate(-50%, -50%);
+  border: 0;
+  border-radius: 50%;
+  background: #050505;
+  box-shadow: 0 1px 2px rgba(0,0,0,.08);
+  pointer-events: none;
+}
+.ls-brush-size-control:focus-visible .ls-brush-size-knob {
+  outline: 3px solid rgba(0,0,0,.25);
+  outline-offset: 3px;
+}
+@media (max-height: 700px) {
+  .ls-brush-size-control { top: 35%; height: clamp(220px, 31vh, 340px); }
+  .ls-brush-size-knob { width: 48px; height: 48px; }
+}
+@media (orientation: landscape) and (max-height: 520px) {
+  .ls-brush-size-control { top: 24%; height: 53vh; min-height: 140px; max-height: 240px; }
+}
