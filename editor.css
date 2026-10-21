@@ -328,3 +328,75 @@ body.is-paper-fullscreen.is-paper-editor-active .paper-fullscreen-edit {
   .ls-editor-dock { bottom: calc(7px + env(safe-area-inset-bottom)); min-height: 58px; }
   .ls-editor-dock .ls-plus-button { width: 56px; min-width: 56px; height: 56px; min-height: 56px; border-radius: 19px; }
 }
+
+
+/* Dedicated hand-drawing workspace on the same embedded paper canvas. */
+.ls-ink-layer { position:absolute; z-index:3000; inset:0 auto auto 0; display:block; width:100%; height:100%; overflow:visible; pointer-events:none; touch-action:none; }
+.ls-editor-shell.is-drawing-mode .ls-editor-topbar { top:max(22px,env(safe-area-inset-top)); left:max(20px,env(safe-area-inset-left)); right:max(14px,env(safe-area-inset-right)); min-height:76px; gap:12px; }
+.ls-editor-shell.is-drawing-mode .ls-undo-button,
+.ls-editor-shell.is-drawing-mode .ls-more-button,
+.ls-editor-shell.is-drawing-mode .ls-editor-dock { display:none !important; }
+.ls-editor-shell.is-drawing-mode .ls-next-button { width:104px; min-width:104px; height:76px; margin-left:auto; border-radius:27px; background:#e7e7e2; color:#111; font-size:16px !important; }
+.ls-editor-shell.is-drawing-mode .ls-next-button:disabled { background:#e7e7e2; color:#111; opacity:1; }
+.ls-editor-shell.is-drawing-mode .ls-topbar-spacer { flex:1 1 auto; }
+body.is-paper-drawing-mode #paper-page-content { background-color:#f7f7f7; background-image:radial-gradient(circle,rgba(190,190,190,.76) 1.45px,transparent 1.9px); background-size:32px 32px; background-position:5px 7px; border-radius:34px; overflow:hidden; }
+body.is-paper-drawing-mode #paper-page-viewport { overflow:hidden !important; touch-action:none !important; overscroll-behavior:none; border-radius:34px; background:#f7f7f7; }
+.ls-drawing-dock { position:fixed; z-index:2147483646; left:max(12px,env(safe-area-inset-left)); right:max(12px,env(safe-area-inset-right)); bottom:calc(0px + env(safe-area-inset-bottom)); height:132px; display:none; align-items:flex-end; justify-content:space-between; gap:12px; padding:0 0 14px; background:transparent; pointer-events:auto; }
+.ls-editor-shell.is-drawing-mode .ls-drawing-dock { display:flex; }
+.ls-draw-undo { flex:0 0 76px; display:grid; place-items:center; width:76px; height:76px; margin:0 3px 2px 0; padding:0; border:0; border-radius:25px; background:#e7e7e2; color:#858681; cursor:pointer; }
+.ls-draw-undo:disabled { opacity:.88; } .ls-draw-undo:not(:disabled) { color:#171715; }
+.ls-draw-undo svg { width:39px; height:39px; fill:none; stroke:currentColor; stroke-width:2.1; stroke-linecap:round; stroke-linejoin:round; }
+.ls-brush-track { display:flex; align-items:flex-end; justify-content:center; flex:1 1 auto; gap:clamp(4px,1.4vw,16px); min-width:0; height:122px; overflow-x:auto; overflow-y:hidden; scrollbar-width:none; overscroll-behavior-x:contain; }
+.ls-brush-track::-webkit-scrollbar { display:none; }
+.ls-brush-option { display:grid; place-items:end center; flex:0 0 46px; width:46px; height:116px; min-height:116px; margin:0; padding:2px 3px 0; border:0; border-radius:13px 13px 7px 7px; background:transparent; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+.ls-brush-option svg { display:block; width:42px; height:96px; overflow:visible; }
+.ls-brush-option.is-picked { background:rgba(231,231,226,.42); }
+.ls-draw-color { flex:0 0 45px; display:grid; place-items:center; width:45px; height:76px; margin:0 0 2px; padding:0; border:0; background:transparent; cursor:pointer; }
+.ls-draw-color span { display:block; width:37px; height:37px; border-radius:50%; background:var(--ls-ink-color,#ed1763); box-shadow:0 1px 4px rgba(0,0,0,.18); border:2px solid rgba(255,255,255,.82); }
+.ls-editor-shell.is-drawing-mode .ls-editor-panel { bottom:calc(140px + env(safe-area-inset-bottom)); max-height:min(38dvh,360px); }
+.ls-draw-color-grid { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:15px 13px; padding:7px 2px 10px; }
+.ls-draw-color-grid button { justify-self:center; width:35px; height:35px; padding:0; border:0; border-radius:50%; background:var(--swatch); box-shadow:inset 0 0 0 1px rgba(0,0,0,.12); position:relative; }
+.ls-draw-color-grid button.is-picked::after { content:""; position:absolute; inset:-5px; border:2px solid #4d4d4a; border-radius:50%; }
+.ls-editor-shell.is-drawing-mode .ls-more-menu { display:none !important; }
+@media (max-width:430px) {
+ .ls-editor-shell.is-drawing-mode .ls-topbar-spacer { min-width:12px; }
+ .ls-drawing-dock { left:16px; right:14px; gap:6px; height:128px; padding-bottom:12px; }
+ .ls-draw-undo { flex-basis:76px; width:76px; height:76px; border-radius:25px; }
+ .ls-brush-track { gap:3px; } .ls-brush-option { flex-basis:42px; width:42px; padding-inline:1px; }
+ .ls-brush-option svg { width:39px; } .ls-draw-color { flex-basis:42px; width:42px; } .ls-draw-color span { width:35px; height:35px; }
+ .ls-editor-shell.is-drawing-mode .ls-next-button { width:104px; min-width:104px; }
+}
+@media (max-width:360px) { .ls-brush-track { justify-content:flex-start; } .ls-brush-option { flex-basis:38px; width:38px; } .ls-brush-option svg { width:35px; } }
+@media (orientation:landscape) and (max-height:520px) {
+ .ls-editor-shell.is-drawing-mode .ls-next-button { height:54px; border-radius:20px; } .ls-drawing-dock { height:95px; }
+ .ls-brush-track { height:91px; } .ls-brush-option { height:86px; min-height:86px; } .ls-brush-option svg { height:76px; }
+ .ls-draw-undo { width:60px; height:60px; flex-basis:60px; border-radius:20px; } .ls-draw-color { height:60px; }
+}
+
+
+/* Match the reference's inset drawing sheet: the toolbars sit in the white margins. */
+body.is-paper-drawing-mode #paper-page-viewport {
+  background: #fff !important;
+  border-radius: 0;
+}
+body.is-paper-drawing-mode #paper-page-content {
+  background: transparent !important;
+  border-radius: 0;
+  overflow: visible !important;
+  isolation: isolate;
+}
+body.is-paper-drawing-mode #paper-page-content::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: clamp(80px, 11vh, 160px) 8px clamp(120px, 11vh, 170px) 8px;
+  border-radius: 34px;
+  background-color: #f7f7f7;
+  background-image: radial-gradient(circle, rgba(190,190,190,.76) 1.45px, transparent 1.9px);
+  background-size: 32px 32px;
+  background-position: 5px 7px;
+  pointer-events: none;
+}
+body.is-paper-drawing-mode .ls-ink-layer {
+  clip-path: inset(clamp(80px, 11vh, 160px) 8px clamp(120px, 11vh, 170px) 8px round 34px);
+}
