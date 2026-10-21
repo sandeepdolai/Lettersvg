@@ -54,7 +54,7 @@ function draw(){
    const c=document.createElement('div');c.className='ls-object-copy'+(o.type==='sticker'?' ls-sticker-copy':'');c.textContent=o.value;
    Object.assign(c.style,{color:o.color,fontFamily:o.font,fontSize:(o.size*contentScale)+'px',fontWeight:o.bold?'700':'400',fontStyle:o.italic?'italic':'normal',textAlign:o.align,justifyContent:'center'});el.append(c);
   }else if(o.type==='image'){const img=document.createElement('img');img.className='ls-object-photo';img.src=o.src;img.alt='Photo on letter';img.draggable=false;img.style.objectFit=o.fit;el.append(img);}
-  else if(o.type==='shape'){const sh=document.createElement('div');sh.className='ls-shape ls-shape-'+o.shape;sh.style.setProperty('--ls-shape-color',o.color);const stroke=(o.shape==='circle'||o.shape==='corner')?3*contentScale:2*contentScale;sh.style.borderWidth=stroke+'px';sh.style.borderRadius=(3*contentScale)+'px';el.append(sh);}
+  else if(o.type==='shape'){const sh=document.createElement('div');sh.className='ls-shape ls-shape-'+o.shape;sh.style.setProperty('--ls-shape-color',o.color);const stroke=(o.shape==='circle'||o.shape==='corner')?3*contentScale:2*contentScale;sh.style.borderWidth=stroke+'px';if(o.shape==='frame'||o.shape==='corner')sh.style.borderRadius=(3*contentScale)+'px';el.append(sh);}
   el.addEventListener('pointerdown',e=>{if(e.target.closest('.ls-object-action')||e.target.closest('.ls-resize-handle'))return;startDrag(e,o,'move');});
   el.addEventListener('click',e=>{e.stopPropagation();if(editing&&selected!==o.id){selected=o.id;draw();}});
   if(o.id===selected&&editing){
