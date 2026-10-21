@@ -564,6 +564,7 @@
       let normalPaperRect = null;
       let paperLocalBox = null;
       let activePaperAnimation = null;
+      let activePaperFade = null;
       const paperMotionEasing = 'cubic-bezier(.22, 1, .36, 1)';
 
       function updateFullscreenViewBox() {
@@ -682,6 +683,14 @@
         letterPaper.style.transform = '';
         letterPaper.style.transformBox = '';
         letterPaper.style.transformOrigin = '';
+        // The paper is faded only while leaving fullscreen; restore full visibility
+        // before returning the original SVG node to the envelope.
+        if (activePaperFade) {
+          activePaperFade.cancel();
+          activePaperFade = null;
+        }
+        letterPaper.style.opacity = '';
+        letterPaper.style.transition = '';
 
         if (paperHomeNextSibling && paperHomeNextSibling.parentNode === paperHomeParent) {
           paperHomeParent.insertBefore(letterPaper, paperHomeNextSibling);
@@ -761,8 +770,34 @@
 
         paperFullscreen.classList.add('is-closing');
         const closingMotion = animatePaperBetweenRects(currentPaperRect, raisedPaperRect, 820);
+        // Make the sheet visually disappear as it slips into the envelope.
+        // Animate opacity on the existing SVG group, not a duplicate paper.
+        const reduceMotion = window.matchMedia &&
+          window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const fadeDuration = reduceMotion ? 1 : 820;
+        if (activePaperFade) {
+          activePaperFade.cancel();
+          activePaperFade = null;
+        }
+        letterPaper.style.opacity = '1';
+        if (typeof letterPaper.animate === 'function') {
+          activePaperFade = letterPaper.animate(
+            [{ opacity: 1 }, { opacity: 0 }],
+            { duration: fadeDuration, easing: paperMotionEasing, fill: 'forwards' }
+          );
+        } else {
+          letterPaper.style.transition = 'opacity ' + fadeDuration + 'ms ' + paperMotionEasing;
+          requestAnimationFrame(() => { letterPaper.style.opacity = '0'; });
+        }
 
         window.setTimeout(() => {
+          // Commit the fade before restoring the original paper node.
+          letterPaper.style.opacity = '0';
+          if (activePaperFade) {
+            activePaperFade.cancel();
+            activePaperFade = null;
+          }
+          letterPaper.style.transition = '';
           // Ensure the upward animation's endpoint is committed before restoring the node.
           if (closingMotion.animation && activePaperAnimation === closingMotion.animation) {
             letterPaper.style.transform = closingMotion.targetTransform;
