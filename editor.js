@@ -3,7 +3,7 @@
 const fs=document.getElementById('paper-fullscreen'), surface=document.getElementById('paper-surface'),
 edit=document.getElementById('paper-fullscreen-edit'), close=document.getElementById('paper-fullscreen-close');
 if(!fs||!surface||!edit||!close)return;
-let items=[],selected=null,nextId=1,editing=false,tab='stickers',undoStack=[],redoStack=[],drag=null,contentScale=1;
+let items=[],selected=null,nextId=1,editing=false,tab='stickers',undoStack=[],redoStack=[],drag=null,contentScale=1,canvasWidth=390,canvasHeight=844,layoutGeometry=new Map();
 const layer=document.createElement('div');layer.className='ls-canvas-layer';layer.setAttribute('aria-label','Editable letter contents');
 const ui=document.createElement('section');ui.className='ls-editor-shell';ui.setAttribute('aria-label','Paper editor');
 ui.innerHTML='<div class="ls-editor-topbar"><button class="ls-done-button" data-do="done">Done</button><div class="ls-document-title"><strong>Letter</strong><span>Editing locally</span></div><div class="ls-history-controls"><button data-do="undo" aria-label="Undo" title="Undo">↶</button><button data-do="redo" aria-label="Redo" title="Redo">↷</button></div></div><div class="ls-editor-panel" aria-live="polite"></div><nav class="ls-editor-dock" aria-label="Editor tools"><button class="ls-tool-button" data-tool="text"><span class="ls-tool-icon">T</span><span>Text</span></button><button class="ls-tool-button" data-tool="photo"><span class="ls-tool-icon ls-photo-icon">＋</span><span>Add photo</span></button><button class="ls-tool-button" data-tool="library"><span class="ls-tool-icon">✦</span><span>Library</span></button></nav>';
@@ -21,7 +21,8 @@ function chosen(){return items.find(o=>o.id===selected)||null;}
 function positionLayer(){
  if(!document.body.classList.contains('is-paper-fullscreen')){layer.style.display='none';layer.style.pointerEvents='none';return;}
  const r=surface.getBoundingClientRect();if(!r.width||!r.height)return;
- contentScale=Math.min(r.width/390,r.height/844);
+ canvasWidth=r.width;canvasHeight=r.height;
+  contentScale=Math.min(2.2,Math.max(.65,Math.sqrt((canvasWidth/390)*(canvasHeight/844))));
  layer.style.setProperty('--ls-content-scale',String(contentScale));
  Object.assign(layer.style,{display:'block',left:r.left+'px',top:r.top+'px',width:r.width+'px',height:r.height+'px',opacity:'1',pointerEvents:editing?'auto':'none'});draw();
 }
@@ -35,21 +36,93 @@ function startDrag(e,o,mode){
  if(!editing||(e.button!==0&&e.pointerType==='mouse'))return;
  e.preventDefault();e.stopPropagation();const r=layer.getBoundingClientRect();if(!r.width||!r.height)return;
  if(mode==='move')saveHistory();selected=o.id;
- drag={id:o.id,mode,sx:e.clientX,sy:e.clientY,x:o.x,y:o.y,w:o.w,h:o.h,pw:o.w*r.width,ph:o.h*r.height,rw:r.width,rh:r.height};draw();
+ const g=layoutGeometry.get(o.id)||o;
+ drag={id:o.id,mode,sx:e.clientX,sy:e.clientY,x:g.x,y:g.y,w:g.w,h:g.h,pw:g.w*r.width,ph:g.h*r.height,rw:r.width,rh:r.height};draw();
 }
 document.addEventListener('pointermove',e=>{
  if(!drag)return;const o=items.find(x=>x.id===drag.id);if(!o)return;const dx=e.clientX-drag.sx,dy=e.clientY-drag.sy;
- if(drag.mode==='move'){o.x=Math.max(0,Math.min(1-o.w,drag.x+dx/drag.rw));o.y=Math.max(0,Math.min(1-o.h,drag.y+dy/drag.rh));}
+ if(drag.mode==='move'){o.x=Math.max(0,Math.min(1-drag.w,drag.x+dx/drag.rw));o.y=Math.max(0,Math.min(1-drag.h,drag.y+dy/drag.rh));}
  else if(o.type==='image'){const ratio=drag.pw/Math.max(1,drag.ph);let w=Math.max(54,drag.pw+dx),h=Math.max(48,drag.ph+dy);if(Math.abs(dx)>=Math.abs(dy))h=w/ratio;else w=h*ratio;o.w=Math.min(1-drag.x,w/drag.rw);o.h=Math.min(1-drag.y,h/drag.rh);}
  else{o.w=Math.min(1-drag.x,Math.max(.1,drag.w+dx/drag.rw));o.h=Math.min(1-drag.y,Math.max(.05,drag.h+dy/drag.rh));}
  draw();
 });
 document.addEventListener('pointerup',()=>drag=null);document.addEventListener('pointercancel',()=>drag=null);
-function draw(){
- layer.replaceChildren();
- items.forEach((o,i)=>{
+function measureTextHeight(o,widthPx){
+  const fontPx=Math.max(10,o.size*contentScale);
+  const availableWidth=Math.max(24,widthPx-8);
+  let lineCount=0;
+  const ctx=measureTextHeight.context||(measureTextHeight.context=document.createElement('canvas').getContext('2d'));
+  if(ctx){
+   ctx.font=(o.italic?'italic ':'')+(o.bold?'700 ':'400 ')+fontPx+'px '+o.font;
+   String(o.value||'').split(/\n/).forEach(paragraph=>{
+    if(!paragraph){lineCount++;return;}
+    let line='';
+    paragraph.split(/\s+/).forEach(word=>{
+     const candidate=line?line+' '+word:word;
+     if(line&&ctx.measureText(candidate).width>availableWidth){lineCount++;line=word;}
+     else line=candidate;
+     if(ctx.measureText(line).width>availableWidth){
+      const chars=Array.from(line);let fragment='';
+      chars.forEach(char=>{if(fragment&&ctx.measureText(fragment+char).width>availableWidth){lineCount++;fragment=char;}else fragment+=char;});
+      line=fragment;
+     }
+    });
+    lineCount++;
+   });
+  }else{
+   const capacity=Math.max(1,Math.floor(availableWidth/(fontPx*.55)));
+   lineCount=String(o.value||'').split(/\n/).reduce((sum,line)=>sum+Math.max(1,Math.ceil(line.length/capacity)),0);
+  }
+  return Math.max(o.h*canvasHeight,lineCount*fontPx*1.22+fontPx*.35);
+ }
+ function responsiveLayout(){
+  const layout=new Map();
+  items.forEach(o=>{
+   const g={x:o.x,y:o.y,w:o.w,h:o.h};
+   if(o.type==='text')g.h=Math.max(g.h,measureTextHeight(o,g.w*canvasWidth)/canvasHeight);
+   g.h=Math.min(g.h,1);
+   g.x=Math.max(0,Math.min(1-g.w,g.x));
+   g.y=Math.max(0,Math.min(1-g.h,g.y));
+   layout.set(o.id,g);
+  });
+  const content=items.filter(o=>o.type==='text'||o.type==='image').slice().sort((a,b)=>a.y-b.y||a.id-b.id);
+  const placed=[],gap=Math.min(.035,Math.max(.014,18/canvasHeight));
+  content.forEach(o=>{
+   const g=layout.get(o.id);
+   if(drag&&drag.id===o.id){placed.push({id:o.id,g});return;}
+   const collisions=placed.filter(p=>{
+    if(drag&&drag.id===p.id)return false;
+    const q=p.g;
+    const overlapX=Math.min(g.x+g.w,q.x+q.w)-Math.max(g.x,q.x);
+    const overlapY=Math.min(g.y+g.h,q.y+q.h)-Math.max(g.y,q.y);
+    return overlapX>Math.min(.06,g.w*.18,q.w*.18)&&overlapY>gap*.35;
+   });
+   if(collisions.length){
+    const below=Math.max.apply(null,collisions.map(p=>p.g.y+p.g.h))+gap;
+    const above=Math.min.apply(null,collisions.map(p=>p.g.y))-g.h-gap;
+    const canBelow=below+g.h<=.985,canAbove=above>=.015;
+    if(canBelow&&canAbove)g.y=Math.abs(below-g.y)<=Math.abs(g.y-above)?below:above;
+    else if(canBelow)g.y=below;
+    else if(canAbove)g.y=above;
+    else{
+     const roomBelow=Math.max(0,.985-below),roomAbove=Math.max(0,Math.min.apply(null,collisions.map(p=>p.g.y))-gap-.015);
+     if(roomBelow>=roomAbove&&roomBelow>.05){g.y=below;g.h=Math.min(g.h,roomBelow);}
+     else if(roomAbove>.05){g.y=Math.max(.015,Math.min.apply(null,collisions.map(p=>p.g.y))-g.h-gap);g.h=Math.min(g.h,roomAbove);}
+     else g.y=Math.max(.015,Math.min(.985-g.h,g.y));
+    }
+   }
+   g.y=Math.max(.015,Math.min(.985-g.h,g.y));
+   placed.push({id:o.id,g});
+  });
+  return layout;
+ }
+ function draw(){
+  layoutGeometry=responsiveLayout();
+  layer.replaceChildren();
+  items.forEach((o,i)=>{
+  const g=layoutGeometry.get(o.id)||o;
   const el=document.createElement('div');el.className='ls-object ls-object-'+o.type+(o.id===selected&&editing?' is-selected':'');el.dataset.id=String(o.id);
-  Object.assign(el.style,{left:o.x*100+'%',top:o.y*100+'%',width:o.w*100+'%',height:o.h*100+'%',transform:'rotate('+o.rotation+'deg)',zIndex:String(o.id===selected?2000:i+1)});
+  Object.assign(el.style,{left:g.x*100+'%',top:g.y*100+'%',width:g.w*100+'%',height:g.h*100+'%',transform:'rotate('+o.rotation+'deg)',zIndex:String(o.id===selected?2000:i+1)});
   if(o.type==='text'||o.type==='sticker'){
    const c=document.createElement('div');c.className='ls-object-copy'+(o.type==='sticker'?' ls-sticker-copy':'');c.textContent=o.value;
    Object.assign(c.style,{color:o.color,fontFamily:o.font,fontSize:(o.size*contentScale)+'px',fontWeight:o.bold?'700':'400',fontStyle:o.italic?'italic':'normal',textAlign:o.align,justifyContent:'center'});el.append(c);
