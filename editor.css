@@ -372,3 +372,31 @@ body.is-paper-drawing-mode #paper-page-viewport { overflow:hidden !important; to
  .ls-brush-track { height:91px; } .ls-brush-option { height:86px; min-height:86px; } .ls-brush-option svg { height:76px; }
  .ls-draw-undo { width:60px; height:60px; flex-basis:60px; border-radius:20px; } .ls-draw-color { height:60px; }
 }
+
+
+/* Match the reference's inset drawing sheet: the toolbars sit in the white margins. */
+body.is-paper-drawing-mode #paper-page-viewport {
+  background: #fff !important;
+  border-radius: 0;
+}
+body.is-paper-drawing-mode #paper-page-content {
+  background: transparent !important;
+  border-radius: 0;
+  overflow: visible !important;
+  isolation: isolate;
+}
+body.is-paper-drawing-mode #paper-page-content::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: clamp(80px, 11vh, 160px) 8px clamp(120px, 11vh, 170px) 8px;
+  border-radius: 34px;
+  background-color: #f7f7f7;
+  background-image: radial-gradient(circle, rgba(190,190,190,.76) 1.45px, transparent 1.9px);
+  background-size: 32px 32px;
+  background-position: 5px 7px;
+  pointer-events: none;
+}
+body.is-paper-drawing-mode .ls-ink-layer {
+  clip-path: inset(clamp(80px, 11vh, 160px) 8px clamp(120px, 11vh, 170px) 8px round 34px);
+}
