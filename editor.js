@@ -7,11 +7,11 @@ letterPaper=document.getElementById('letter-paper'), paperShadow=letterPaper&&le
 if(!fs||!surface||!edit||!close||!layer||!page||!letterPaper||!paperShadow)return;
 const originalSurfaceHeight=Number(surface.getAttribute('height'))||690;
 const originalShadowHeight=Number(paperShadow.getAttribute('height'))||originalSurfaceHeight;
-let items=[],selected=null,nextId=1,editing=false,websiteMode=false,drawingMode=false,selectedBrush='marker',drawColor='#ed1763',strokes=[],activeStroke=null,activeStrokePath=null,activePointerId=null,tab='stickers',undoStack=[],redoStack=[],drag=null,contentScale=1,canvasWidth=390,canvasHeight=844,layoutGeometry=new Map();
+let items=[],selected=null,nextId=1,editing=false,websiteMode=false,drawingMode=false,selectedBrush='marker',drawColor='#ed1763',brushSize=24,sizePointerId=null,strokes=[],activeStroke=null,activeStrokePath=null,activePointerId=null,tab='stickers',undoStack=[],redoStack=[],drag=null,contentScale=1,canvasWidth=390,canvasHeight=844,layoutGeometry=new Map();
 const ui=document.createElement('section');ui.className='ls-editor-shell';ui.setAttribute('aria-label','Paper editor');
 ui.innerHTML='<div class="ls-editor-topbar" aria-label="Editor controls"><button class="ls-icon-button ls-close-button" data-do="exit" aria-label="Close editor" title="Close editor"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5 19 19M19 5 5 19"/></svg></button><button class="ls-icon-button ls-undo-button" data-do="undo" aria-label="Undo" title="Undo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14 4 9l5-5M4 9h9a6 6 0 0 1 0 12h-2"/></svg></button><span class="ls-topbar-spacer"></span><button class="ls-icon-button ls-more-button" data-do="more" aria-label="More options" aria-expanded="false" title="More options"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg></button><button class="ls-next-button" data-do="next" disabled>Next</button></div><div class="ls-more-menu" aria-label="More options"><button data-do="redo"><span>Redo</span><span class="ls-menu-shortcut">↷</span></button><button data-do="library"><span>Library</span><span class="ls-menu-shortcut">✦</span></button><button data-do="layouts"><span>Premade layouts</span><span class="ls-menu-shortcut">▤</span></button></div><div class="ls-editor-panel" aria-live="polite"></div><nav class="ls-editor-dock" aria-label="Editor tools"><button class="ls-tool-button ls-wave-button" data-tool="draw" aria-label="Draw" title="Draw"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M3 23c4-8 7-13 10-13 5 0-4 18-1 18 2 0 9-17 13-17 5 0-4 19-1 19 3 0 7-8 13-15M4 31c4-5 7-7 10-7"/></svg></button><button class="ls-tool-button ls-text-button" data-tool="text" aria-label="Text" title="Text"><span class="ls-letter-a">A</span></button><button class="ls-tool-button ls-plus-button" data-do="quick-add" aria-label="Add to page" title="Add to page"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M20 5v30M5 20h30"/></svg></button><button class="ls-tool-button ls-photo-button" data-tool="photo" aria-label="Add photo" title="Add photo"><svg viewBox="0 0 40 40" aria-hidden="true"><rect x="3.5" y="5.5" width="33" height="29" rx="4"/><circle cx="13" cy="14" r="3"/><path d="m5 29 9-8 7 6 5-5 9 9"/></svg></button><button class="ls-tool-button ls-camera-button" data-tool="camera" aria-label="Take a photo" title="Take a photo"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M5 12h7l3-5h10l3 5h7a3 3 0 0 1 3 3v17a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3V15a3 3 0 0 1 3-3Z"/><circle cx="20" cy="23" r="8"/><circle cx="20" cy="23" r="4.5"/></svg></button></nav>';
 fs.append(ui);
-ui.insertAdjacentHTML('beforeend','<nav class="ls-drawing-dock" aria-label="Drawing tools"><button class="ls-draw-undo" data-draw-action="undo" aria-label="Undo stroke" title="Undo stroke" disabled><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M16 11 7 20l9 9M8 20h14a9 9 0 0 1 0 18h-3"/></svg></button><div class="ls-brush-track" role="group" aria-label="Brush type"><button class="ls-brush-option" data-brush="pen" aria-label="Pen" title="Pen"><svg viewBox="0 0 44 92" aria-hidden="true"><path d="M17 5 22 1l5 4 4 17H13Z" fill="#111"/><path d="M13 22h18l4 8v48H9V30Z" fill="#050505"/><path d="M9 78h26l-5 9H14Z" fill="#111"/></svg></button><button class="ls-brush-option is-picked" data-brush="marker" aria-label="Marker" title="Marker"><svg viewBox="0 0 44 92" aria-hidden="true"><path d="M12 12Q12 4 22 2Q32 4 32 12L35 22H9Z" fill="#3e3e3e"/><path d="M10 23h24l3 10-2 43H9L7 33Z" fill="#555"/><path d="M9 44h26M9 76h26" fill="none" stroke="#f1f1f1" stroke-width="2"/><path d="M11 80h22l-6 9H17Z" fill="#3f3f3f"/></svg></button><button class="ls-brush-option" data-brush="pencil" aria-label="Pencil" title="Pencil"><svg viewBox="0 0 44 92" aria-hidden="true"><path d="M16 10 22 2 28 10 32 78 22 90 12 78Z" fill="#777"/><path d="M16 10h12M13 76h18" stroke="#eee" stroke-width="2"/><path d="M22 90 18 84h8Z" fill="#222"/></svg></button><button class="ls-brush-option" data-brush="brush" aria-label="Brush" title="Brush"><svg viewBox="0 0 44 92" aria-hidden="true"><path d="M21 4 35 16 22 34 9 21Z" fill="#494949"/><path d="M10 20 28 37 21 66 14 83 7 65Z" fill="#555"/><path d="M8 65h15l-3 17-4 7-4-7Z" fill="#171717"/></svg></button><button class="ls-brush-option" data-brush="eraser" aria-label="Eraser" title="Eraser"><svg viewBox="0 0 44 92" aria-hidden="true"><path d="m9 22 14-15 14 14-14 15Z" fill="#777"/><path d="m9 22 14 14-8 8L2 30Z" fill="#b9b9b9"/><path d="M10 45h24M12 49h20" stroke="#555" stroke-width="2"/><path d="M16 51h12v35H16Z" fill="#4a4a4a"/><path d="M19 54v28m6-28v28" stroke="#eee" stroke-width="2"/></svg></button></div><button class="ls-draw-color" data-draw-action="color" aria-label="Choose ink color" title="Choose ink color"><span></span></button></nav>');
+ui.insertAdjacentHTML('beforeend','<nav class="ls-drawing-dock" aria-label="Drawing tools"><button class="ls-draw-undo" data-draw-action="undo" aria-label="Undo stroke" title="Undo stroke" disabled><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M16 11 7 20l9 9M8 20h14a9 9 0 0 1 0 18h-3"/></svg></button><div class="ls-brush-track" role="group" aria-label="Brush type"><button class="ls-brush-option" data-brush="pen" aria-label="Pen" title="Pen"><svg viewBox="0 0 44 92" aria-hidden="true"><path d="M17 5 22 1l5 4 4 17H13Z" fill="#111"/><path d="M13 22h18l4 8v48H9V30Z" fill="#050505"/><path d="M9 78h26l-5 9H14Z" fill="#111"/></svg></button><button class="ls-brush-option is-picked" data-brush="marker" aria-label="Marker" title="Marker"><svg viewBox="0 0 44 92" aria-hidden="true"><path d="M12 12Q12 4 22 2Q32 4 32 12L35 22H9Z" fill="#3e3e3e"/><path d="M10 23h24l3 10-2 43H9L7 33Z" fill="#555"/><path d="M9 44h26M9 76h26" fill="none" stroke="#f1f1f1" stroke-width="2"/><path d="M11 80h22l-6 9H17Z" fill="#3f3f3f"/></svg></button><button class="ls-brush-option" data-brush="pencil" aria-label="Pencil" title="Pencil"><svg viewBox="0 0 44 92" aria-hidden="true"><path d="M16 10 22 2 28 10 32 78 22 90 12 78Z" fill="#777"/><path d="M16 10h12M13 76h18" stroke="#eee" stroke-width="2"/><path d="M22 90 18 84h8Z" fill="#222"/></svg></button><button class="ls-brush-option" data-brush="brush" aria-label="Brush" title="Brush"><svg viewBox="0 0 44 92" aria-hidden="true"><path d="M21 4 35 16 22 34 9 21Z" fill="#494949"/><path d="M10 20 28 37 21 66 14 83 7 65Z" fill="#555"/><path d="M8 65h15l-3 17-4 7-4-7Z" fill="#171717"/></svg></button><button class="ls-brush-option" data-brush="eraser" aria-label="Eraser" title="Eraser"><svg viewBox="0 0 44 92" aria-hidden="true"><path d="m9 22 14-15 14 14-14 15Z" fill="#777"/><path d="m9 22 14 14-8 8L2 30Z" fill="#b9b9b9"/><path d="M10 45h24M12 49h20" stroke="#555" stroke-width="2"/><path d="M16 51h12v35H16Z" fill="#4a4a4a"/><path d="M19 54v28m6-28v28" stroke="#eee" stroke-width="2"/></svg></button></div><button class="ls-draw-color" data-draw-action="color" aria-label="Choose ink color" title="Choose ink color"><span></span></button></nav><div class="ls-brush-size-control" role="slider" tabindex="0" aria-label="Brush size" aria-orientation="vertical" aria-valuemin="4" aria-valuemax="44" aria-valuenow="24" aria-valuetext="24 brush size" title="Drag to change brush size"><span class="ls-brush-size-track"></span><span class="ls-brush-size-knob"></span></div>');
 const panel=ui.querySelector('.ls-editor-panel'),file=document.createElement('input');
 const svgNS='http://www.w3.org/2000/svg';
 const inkLayer=document.createElementNS(svgNS,'svg');
@@ -38,6 +38,44 @@ function updateDrawingControls(){
  const undoButton=ui.querySelector('.ls-draw-undo');if(undoButton)undoButton.disabled=strokes.length===0;
  ui.querySelectorAll('[data-brush]').forEach(b=>b.classList.toggle('is-picked',b.dataset.brush===selectedBrush));
  const colorButton=ui.querySelector('.ls-draw-color');if(colorButton){colorButton.style.setProperty('--ls-ink-color',drawColor);colorButton.setAttribute('aria-label','Choose ink color, current '+drawColor);}
+ const sizeControl=ui.querySelector('.ls-brush-size-control');
+ if(sizeControl){
+  const pct=((44-brushSize)/(44-4))*100;
+  sizeControl.style.setProperty('--ls-brush-size-position',pct+'%');
+  sizeControl.setAttribute('aria-valuenow',String(brushSize));
+  sizeControl.setAttribute('aria-valuetext',brushSize+' brush size');
+ }
+}
+function setBrushSize(value){
+ brushSize=Math.max(4,Math.min(44,Math.round(Number(value)||24)));
+ updateDrawingControls();
+}
+function setBrushSizeFromY(clientY){
+ const control=ui.querySelector('.ls-brush-size-control');
+ if(!control)return;
+ const rect=control.getBoundingClientRect();
+ const pct=Math.max(0,Math.min(1,(clientY-rect.top)/Math.max(1,rect.height)));
+ setBrushSize(44-pct*(44-4));
+}
+function startBrushSizeChange(e){
+ if(!drawingMode)return;
+ e.preventDefault();e.stopPropagation();sizePointerId=e.pointerId;
+ setBrushSizeFromY(e.clientY);
+ try{e.currentTarget.setPointerCapture(e.pointerId);}catch(_){}
+}
+function moveBrushSizeChange(e){
+ if(sizePointerId===null||e.pointerId!==sizePointerId)return;
+ e.preventDefault();setBrushSizeFromY(e.clientY);
+}
+function finishBrushSizeChange(e){
+ if(sizePointerId===null||(e&&e.pointerId!==sizePointerId))return;
+ sizePointerId=null;
+}
+function keyBrushSizeChange(e){
+ const keys={ArrowUp:1,ArrowRight:1,ArrowDown:-1,ArrowLeft:-1};
+ if(e.key in keys){e.preventDefault();setBrushSize(brushSize+keys[e.key]);}
+ else if(e.key==='Home'){e.preventDefault();setBrushSize(4);}
+ else if(e.key==='End'){e.preventDefault();setBrushSize(44);}
 }
 function strokePathData(stroke){
  const points=stroke.points||[];
@@ -56,7 +94,7 @@ function inkPointFromEvent(e){
 }
 function startInk(e){
  if(!drawingMode||(e.button!==0&&e.pointerType==='mouse'))return;e.preventDefault();e.stopPropagation();
- const p=inkPointFromEvent(e),erasing=selectedBrush==='eraser';activeStroke={color:erasing?'#f7f7f7':drawColor,width:brushWidths[selectedBrush]||4,brush:selectedBrush,points:[p]};strokes.push(activeStroke);activeStrokePath=makeInkPath(activeStroke);inkLayer.append(activeStrokePath);activePointerId=e.pointerId;try{inkLayer.setPointerCapture(e.pointerId);}catch(_){}updateDrawingControls();
+ const p=inkPointFromEvent(e),erasing=selectedBrush==='eraser';activeStroke={color:erasing?'#f7f7f7':drawColor,width:Math.round((brushWidths[selectedBrush]||4)*(brushSize/24)*10)/10,brush:selectedBrush,brushSize,points:[p]};strokes.push(activeStroke);activeStrokePath=makeInkPath(activeStroke);inkLayer.append(activeStrokePath);activePointerId=e.pointerId;try{inkLayer.setPointerCapture(e.pointerId);}catch(_){}updateDrawingControls();
 }
 function moveInk(e){
  if(!drawingMode||!activeStroke||e.pointerId!==activePointerId)return;e.preventDefault();const p=inkPointFromEvent(e),last=activeStroke.points[activeStroke.points.length-1],dx=p.x-last.x,dy=p.y-last.y;if(dx*dx+dy*dy<0.000002)return;activeStroke.points.push(p);activeStrokePath.setAttribute('d',strokePathData(activeStroke));
@@ -230,7 +268,15 @@ function measureTextHeight(o,widthPx){
 }
 
 inkLayer.addEventListener('pointerdown',startInk);
-document.addEventListener('pointermove',moveInk,{passive:false});document.addEventListener('pointerup',finishInk);document.addEventListener('pointercancel',finishInk);
+const brushSizeControl=ui.querySelector('.ls-brush-size-control');
+if(brushSizeControl){
+ brushSizeControl.addEventListener('pointerdown',startBrushSizeChange);
+ brushSizeControl.addEventListener('keydown',keyBrushSizeChange);
+}
+document.addEventListener('pointermove',moveInk,{passive:false});
+document.addEventListener('pointermove',moveBrushSizeChange,{passive:false});
+document.addEventListener('pointerup',finishInk);document.addEventListener('pointercancel',finishInk);
+document.addEventListener('pointerup',finishBrushSizeChange);document.addEventListener('pointercancel',finishBrushSizeChange);
 page.addEventListener('pointerdown',e=>{if(e.target===page&&editing){selected=null;draw();}});
 function openEditor(){if(!document.body.classList.contains('is-paper-fullscreen'))return;editing=true;websiteMode=true;document.body.classList.add('is-paper-editor-active');ui.classList.add('is-active');edit.classList.remove('is-visible');const old=document.getElementById('paper-fullscreen-text');if(old)old.classList.remove('is-visible');positionLayer();draw();}
 function done(){editing=false;panel.classList.remove('is-open');ui.classList.remove('is-active');document.body.classList.remove('is-paper-editor-active');setMoreMenu(false);edit.classList.add('is-visible');layer.style.pointerEvents=websiteMode?'auto':'none';draw();}
