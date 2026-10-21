@@ -74,3 +74,257 @@
   .ls-object-actions { max-width: calc(100vw - 24px); }
   .ls-object-copy { line-height: 1.2; }
 }
+
+
+/* Screenshot-matched editor toolbar: minimal header and five large bottom icons. */
+.ls-editor-shell { z-index: 2147483644; }
+.ls-editor-topbar {
+  top: max(22px, env(safe-area-inset-top));
+  left: max(20px, env(safe-area-inset-left));
+  right: max(12px, env(safe-area-inset-right));
+  min-height: 76px;
+  gap: clamp(12px, 3.5vw, 25px);
+  align-items: center;
+}
+.ls-editor-topbar .ls-icon-button {
+  display: grid;
+  place-items: center;
+  flex: 0 0 44px;
+  width: 44px;
+  height: 48px;
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: #080808;
+  box-shadow: none;
+  cursor: pointer;
+}
+.ls-editor-topbar .ls-icon-button svg {
+  display: block;
+  width: 34px;
+  height: 34px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.ls-editor-topbar .ls-undo-button { color: #95958f; }
+.ls-editor-topbar .ls-undo-button:disabled { opacity: .72; }
+.ls-topbar-spacer { flex: 1 1 auto; min-width: 0; }
+.ls-editor-topbar .ls-more-button svg { width: 32px; height: 32px; fill: currentColor; stroke: none; }
+.ls-editor-topbar .ls-next-button {
+  flex: 0 0 auto;
+  width: 102px;
+  min-width: 102px;
+  height: 76px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 27px;
+  background: #e7e7e2;
+  color: #171715;
+  font-size: 16px !important;
+  font-weight: 600 !important;
+  cursor: pointer;
+  box-shadow: none;
+}
+.ls-editor-topbar .ls-next-button:disabled {
+  background: #e7e7e2;
+  color: #999994;
+  cursor: default;
+}
+.ls-editor-dock {
+  left: 50%;
+  bottom: calc(16px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(14px, 3.8vw, 28px);
+  width: max-content;
+  max-width: calc(100vw - 20px);
+  min-height: 76px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+.ls-editor-dock .ls-tool-button {
+  display: grid;
+  place-items: center;
+  flex: 0 0 44px;
+  width: 44px;
+  height: 54px;
+  min-height: 54px;
+  min-width: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #101010;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  cursor: pointer;
+}
+.ls-editor-dock .ls-tool-button.is-active {
+  background: transparent;
+  border-color: transparent;
+  color: #101010;
+}
+.ls-editor-dock .ls-tool-icon { display: none; }
+.ls-editor-dock .ls-wave-button svg {
+  display: block;
+  width: 38px;
+  height: 38px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.ls-editor-dock .ls-letter-a {
+  display: block;
+  font: 500 38px/1 Georgia, "Times New Roman", serif;
+  transform: translateY(-1px);
+}
+.ls-editor-dock .ls-plus-button {
+  flex-basis: 76px;
+  width: 76px;
+  min-width: 76px;
+  height: 76px;
+  min-height: 76px;
+  border-radius: 27px;
+  background: #e7e7e2;
+  color: #101010;
+}
+.ls-editor-dock .ls-plus-button.is-active { background: #e7e7e2; }
+.ls-editor-dock .ls-plus-button svg {
+  display: block;
+  width: 42px;
+  height: 42px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: square;
+}
+.ls-editor-dock .ls-photo-button svg {
+  display: block;
+  width: 37px;
+  height: 37px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.ls-editor-dock .ls-camera-button svg {
+  display: block;
+  width: 39px;
+  height: 39px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.ls-editor-panel {
+  bottom: calc(106px + env(safe-area-inset-bottom));
+  width: min(440px, calc(100vw - 24px));
+  max-height: min(48dvh, 470px);
+  border-radius: 22px;
+}
+.ls-more-menu {
+  position: fixed;
+  z-index: 2147483647;
+  top: max(90px, calc(env(safe-area-inset-top) + 86px));
+  right: 116px;
+  display: none;
+  width: 196px;
+  padding: 7px;
+  border: 1px solid rgba(30, 30, 30, .08);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, .98);
+  box-shadow: 0 10px 36px rgba(0, 0, 0, .13);
+}
+.ls-more-menu.is-open { display: grid; gap: 2px; }
+.ls-more-menu[hidden] { display: none !important; }
+.ls-more-menu button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 43px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: #171717;
+  text-align: left;
+  font-size: 14px !important;
+  cursor: pointer;
+}
+.ls-more-menu button:hover { background: #f4f4f1; }
+.ls-menu-shortcut { color: #7d7d77; font-size: 18px; }
+.ls-add-choice-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+.ls-add-choice-grid button {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 88px;
+  padding: 10px 3px;
+  border: 1px solid #ece9e4;
+  border-radius: 14px;
+  background: #fff;
+  color: #211f1d;
+  cursor: pointer;
+}
+.ls-add-choice-grid strong { font-size: 11px; font-weight: 600; }
+.ls-add-choice-icon {
+  display: grid;
+  place-items: center;
+  width: 35px;
+  height: 35px;
+  color: #171715;
+  font: 26px/1 Georgia, serif;
+}
+.ls-add-text-icon { font-size: 30px; }
+body.is-paper-fullscreen.is-paper-editor-active .paper-fullscreen-close,
+body.is-paper-fullscreen.is-paper-editor-active .paper-fullscreen-edit {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+@media (max-width: 420px) {
+  .ls-editor-topbar { gap: clamp(8px, 2.8vw, 16px); left: max(14px, env(safe-area-inset-left)); right: max(10px, env(safe-area-inset-right)); }
+  .ls-editor-topbar .ls-next-button { width: 96px; min-width: 96px; }
+  .ls-editor-dock { gap: clamp(10px, 3.2vw, 18px); }
+  .ls-editor-dock .ls-tool-button { flex-basis: 39px; width: 39px; min-width: 39px; }
+  .ls-editor-dock .ls-plus-button { flex-basis: 70px; width: 70px; min-width: 70px; height: 70px; min-height: 70px; border-radius: 24px; }
+  .ls-editor-dock .ls-wave-button svg { width: 34px; height: 34px; }
+  .ls-editor-dock .ls-photo-button svg { width: 34px; height: 34px; }
+  .ls-editor-dock .ls-camera-button svg { width: 36px; height: 36px; }
+  .ls-more-menu { right: 108px; }
+}
+@media (max-width: 360px) {
+  .ls-editor-topbar { gap: 7px; }
+  .ls-editor-topbar .ls-icon-button { flex-basis: 38px; width: 38px; }
+  .ls-editor-topbar .ls-next-button { width: 88px; min-width: 88px; }
+  .ls-editor-dock { gap: 8px; }
+}
+@media (orientation: landscape) and (max-height: 520px) {
+  .ls-editor-topbar { top: max(8px, env(safe-area-inset-top)); min-height: 58px; }
+  .ls-editor-topbar .ls-next-button { height: 54px; border-radius: 20px; }
+  .ls-editor-dock { bottom: calc(7px + env(safe-area-inset-bottom)); min-height: 58px; }
+  .ls-editor-dock .ls-plus-button { width: 56px; min-width: 56px; height: 56px; min-height: 56px; border-radius: 19px; }
+}

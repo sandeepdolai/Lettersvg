@@ -9,13 +9,13 @@ const originalSurfaceHeight=Number(surface.getAttribute('height'))||690;
 const originalShadowHeight=Number(paperShadow.getAttribute('height'))||originalSurfaceHeight;
 let items=[],selected=null,nextId=1,editing=false,websiteMode=false,tab='stickers',undoStack=[],redoStack=[],drag=null,contentScale=1,canvasWidth=390,canvasHeight=844,layoutGeometry=new Map();
 const ui=document.createElement('section');ui.className='ls-editor-shell';ui.setAttribute('aria-label','Paper editor');
-ui.innerHTML='<div class="ls-editor-topbar"><button class="ls-done-button" data-do="done">Done</button><div class="ls-document-title"><strong>Letter</strong><span>Editing locally</span></div><div class="ls-history-controls"><button data-do="undo" aria-label="Undo" title="Undo">↶</button><button data-do="redo" aria-label="Redo" title="Redo">↷</button></div></div><div class="ls-editor-panel" aria-live="polite"></div><nav class="ls-editor-dock" aria-label="Editor tools"><button class="ls-tool-button" data-tool="text"><span class="ls-tool-icon">T</span><span>Text</span></button><button class="ls-tool-button" data-tool="photo"><span class="ls-tool-icon ls-photo-icon">＋</span><span>Add photo</span></button><button class="ls-tool-button" data-tool="library"><span class="ls-tool-icon">✦</span><span>Library</span></button></nav>';
+ui.innerHTML='<div class="ls-editor-topbar" aria-label="Editor controls"><button class="ls-icon-button ls-close-button" data-do="exit" aria-label="Close editor" title="Close editor"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5 19 19M19 5 5 19"/></svg></button><button class="ls-icon-button ls-undo-button" data-do="undo" aria-label="Undo" title="Undo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14 4 9l5-5M4 9h9a6 6 0 0 1 0 12h-2"/></svg></button><span class="ls-topbar-spacer"></span><button class="ls-icon-button ls-more-button" data-do="more" aria-label="More options" aria-expanded="false" title="More options"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg></button><button class="ls-next-button" data-do="next" disabled>Next</button></div><div class="ls-more-menu" aria-label="More options"><button data-do="redo"><span>Redo</span><span class="ls-menu-shortcut">↷</span></button><button data-do="library"><span>Library</span><span class="ls-menu-shortcut">✦</span></button><button data-do="layouts"><span>Premade layouts</span><span class="ls-menu-shortcut">▤</span></button></div><div class="ls-editor-panel" aria-live="polite"></div><nav class="ls-editor-dock" aria-label="Editor tools"><button class="ls-tool-button ls-wave-button" data-tool="library" aria-label="Library" title="Library"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M3 23c4-8 7-13 10-13 5 0-4 18-1 18 2 0 9-17 13-17 5 0-4 19-1 19 3 0 7-8 13-15M4 31c4-5 7-7 10-7"/></svg></button><button class="ls-tool-button ls-text-button" data-tool="text" aria-label="Text" title="Text"><span class="ls-letter-a">A</span></button><button class="ls-tool-button ls-plus-button" data-do="quick-add" aria-label="Add to page" title="Add to page"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M20 5v30M5 20h30"/></svg></button><button class="ls-tool-button ls-photo-button" data-tool="photo" aria-label="Add photo" title="Add photo"><svg viewBox="0 0 40 40" aria-hidden="true"><rect x="3.5" y="5.5" width="33" height="29" rx="4"/><circle cx="13" cy="14" r="3"/><path d="m5 29 9-8 7 6 5-5 9 9"/></svg></button><button class="ls-tool-button ls-camera-button" data-tool="camera" aria-label="Take a photo" title="Take a photo"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M5 12h7l3-5h10l3 5h7a3 3 0 0 1 3 3v17a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3V15a3 3 0 0 1 3-3Z"/><circle cx="20" cy="23" r="8"/><circle cx="20" cy="23" r="4.5"/></svg></button></nav>';
 fs.append(ui);
 const panel=ui.querySelector('.ls-editor-panel'),file=document.createElement('input');
 file.type='file';file.accept='image/*';file.multiple=true;file.className='ls-file-input';file.tabIndex=-1;file.setAttribute('aria-label','Choose photos from your device');ui.append(file);
 const clone=a=>JSON.parse(JSON.stringify(a));
 function saveHistory(){undoStack.push(clone(items));if(undoStack.length>30)undoStack.shift();redoStack=[];histButtons();}
-function histButtons(){const u=ui.querySelector('[data-do="undo"]'),r=ui.querySelector('[data-do="redo"]');if(u)u.disabled=!undoStack.length;if(r)r.disabled=!redoStack.length;}
+function histButtons(){const u=ui.querySelector('[data-do="undo"]'),r=ui.querySelector('[data-do="redo"]'),n=ui.querySelector('[data-do="next"]');if(u)u.disabled=!undoStack.length;if(r)r.disabled=!redoStack.length;if(n)n.disabled=items.length===0;}
 function undo(){if(!undoStack.length)return;redoStack.push(clone(items));items=undoStack.pop();selected=null;draw();histButtons();}
 function redo(){if(!redoStack.length)return;undoStack.push(clone(items));items=redoStack.pop();selected=null;draw();histButtons();}
 function make(type,p){const o={id:nextId++,type,x:.16,y:.2,w:.68,h:.14,rotation:0,value:'',color:'#282322',font:'Arial, Helvetica, sans-serif',size:30,bold:false,italic:false,align:'center',fit:'contain',shape:'',src:''};Object.assign(o,p||{});return o;}
@@ -181,10 +181,13 @@ function measureTextHeight(o,widthPx){
 }
 
 page.addEventListener('pointerdown',e=>{if(e.target===page&&editing){selected=null;draw();}});
-function openEditor(){if(!document.body.classList.contains('is-paper-fullscreen'))return;editing=true;websiteMode=true;ui.classList.add('is-active');edit.classList.remove('is-visible');const old=document.getElementById('paper-fullscreen-text');if(old)old.classList.remove('is-visible');positionLayer();draw();}
-function done(){editing=false;panel.classList.remove('is-open');ui.classList.remove('is-active');edit.classList.add('is-visible');layer.style.pointerEvents=websiteMode?'auto':'none';draw();}
-function showPanel(){panel.classList.add('is-open');}function hidePanel(){panel.classList.remove('is-open');ui.querySelectorAll('[data-tool]').forEach(b=>b.classList.remove('is-active'));}
+function openEditor(){if(!document.body.classList.contains('is-paper-fullscreen'))return;editing=true;websiteMode=true;document.body.classList.add('is-paper-editor-active');ui.classList.add('is-active');edit.classList.remove('is-visible');const old=document.getElementById('paper-fullscreen-text');if(old)old.classList.remove('is-visible');positionLayer();draw();}
+function done(){editing=false;panel.classList.remove('is-open');ui.classList.remove('is-active');document.body.classList.remove('is-paper-editor-active');setMoreMenu(false);edit.classList.add('is-visible');layer.style.pointerEvents=websiteMode?'auto':'none';draw();}
+function setMoreMenu(open){const menu=ui.querySelector('.ls-more-menu'),button=ui.querySelector('.ls-more-button');if(menu)menu.classList.toggle('is-open',!!open);if(button)button.setAttribute('aria-expanded',open?'true':'false');}
+function showPanel(){setMoreMenu(false);panel.classList.add('is-open');}
+function hidePanel(){panel.classList.remove('is-open');ui.querySelectorAll('[data-tool]').forEach(b=>b.classList.remove('is-active'));const add=ui.querySelector('[data-do="quick-add"]');if(add)add.classList.remove('is-active');}
 function textPanel(){
+ setMoreMenu(false);
  ui.querySelectorAll('[data-tool]').forEach(b=>b.classList.toggle('is-active',b.dataset.tool==='text'));
  const o=chosen(),editText=o&&o.type==='text'?o:null;if(editText)saveHistory();
  const color=editText?editText.color:'#282322',align=editText?editText.align:'center',font=editText?editText.font:'Arial, Helvetica, sans-serif',size=editText?editText.size:30;
@@ -198,13 +201,22 @@ function textPanel(){
  panel.querySelectorAll('[data-align]').forEach(b=>{b.classList.toggle('is-on',b.dataset.align===a);b.addEventListener('click',()=>{a=b.dataset.align;panel.querySelectorAll('[data-align]').forEach(x=>x.classList.toggle('is-on',x===b));update();});});
  showPanel();if(editText)update();input.focus({preventScroll:true});
 }
+function quickAddPanel(){
+ const button=ui.querySelector('[data-do="quick-add"]');
+ if(panel.classList.contains('is-open')&&button&&button.classList.contains('is-active')){hidePanel();return;}
+ setMoreMenu(false);
+ ui.querySelectorAll('[data-tool]').forEach(b=>b.classList.remove('is-active'));
+ if(button)button.classList.add('is-active');
+ panel.innerHTML='<div class="ls-panel-header"><div><h3>Add to your page</h3><p>Choose what you want to add</p></div><button class="ls-panel-close" data-do="close-panel" aria-label="Close panel">×</button></div><div class="ls-add-choice-grid"><button data-do="quick-text"><span class="ls-add-choice-icon ls-add-text-icon">A</span><strong>Text</strong></button><button data-do="quick-photo"><span class="ls-add-choice-icon">▧</span><strong>Photo</strong></button><button data-do="quick-library"><span class="ls-add-choice-icon">✦</span><strong>Library</strong></button><button data-do="quick-camera"><span class="ls-add-choice-icon">◎</span><strong>Camera</strong></button></div>';
+ showPanel();
+}
 function applyText(){
  const input=panel.querySelector('.ls-text-input');if(!input)return;const value=input.value.trim(),existing=chosen();
  if(existing&&existing.type==='text'){existing.value=input.value;hidePanel();draw();return;}
  if(!value){input.placeholder='Type a message first…';input.focus();return;}
  add(make('text',{value:input.value,color:panel.querySelector('[data-color].is-picked')?.dataset.color||'#282322',size:Number(panel.querySelector('.ls-size-input').value||30),font:panel.querySelector('.ls-font-select').value,x:.08,y:nextFlowY(),w:.84,h:.08,bold:!!panel.querySelector('[data-format="bold"].is-on'),italic:!!panel.querySelector('[data-format="italic"].is-on'),align:panel.querySelector('[data-align].is-on')?.dataset.align||'center'}));hidePanel();
 }
-function choosePhoto(){hidePanel();file.value='';file.click();}
+function choosePhoto(useCamera){hidePanel();setMoreMenu(false);file.value='';if(useCamera)file.setAttribute('capture','environment');else file.removeAttribute('capture');file.click();}
 file.addEventListener('change',()=>{
  const files=Array.from(file.files||[]).filter(f=>f.type&&f.type.indexOf('image/')===0);if(!files.length)return;saveHistory();
  files.forEach(f=>{
@@ -247,16 +259,32 @@ function libraryAdd(name){
  if(stickers[name]){const s=stickers[name];add(make('sticker',{value:s[0],color:s[1],size:64,x:.36,y:nextFlowY(),w:.28,h:.2}));}
 }
 ui.addEventListener('click',e=>{
- const tool=e.target.closest('[data-tool]');if(tool){if(tool.dataset.tool==='text')textPanel();else if(tool.dataset.tool==='photo')choosePhoto();else libraryPanel('stickers');return;}
- const action=e.target.closest('[data-do]');if(action){const v=action.dataset.do;if(v==='done')done();else if(v==='undo')undo();else if(v==='redo')redo();else if(v==='close-panel')hidePanel();else if(v==='apply-text')applyText();return;}
+ const tool=e.target.closest('[data-tool]');if(tool){if(tool.dataset.tool==='text')textPanel();else if(tool.dataset.tool==='photo')choosePhoto(false);else if(tool.dataset.tool==='camera')choosePhoto(true);else libraryPanel('stickers');return;}
+ const action=e.target.closest('[data-do]');if(action){const v=action.dataset.do;
+  if(v==='exit'){close.click();}
+  else if(v==='next'||v==='done')done();
+  else if(v==='undo')undo();
+  else if(v==='redo') {setMoreMenu(false);redo();}
+  else if(v==='more'){hidePanel();setMoreMenu(!ui.querySelector('.ls-more-menu').classList.contains('is-open'));}
+  else if(v==='quick-add')quickAddPanel();
+  else if(v==='quick-text'){hidePanel();textPanel();}
+  else if(v==='quick-photo')choosePhoto(false);
+  else if(v==='quick-camera')choosePhoto(true);
+  else if(v==='quick-library'){hidePanel();libraryPanel('stickers');}
+  else if(v==='library'){setMoreMenu(false);libraryPanel('stickers');}
+  else if(v==='layouts'){setMoreMenu(false);libraryPanel('layouts');}
+  else if(v==='close-panel')hidePanel();
+  else if(v==='apply-text')applyText();
+  return;
+ }
  const t=e.target.closest('[data-lib-tab]');if(t){libraryPanel(t.dataset.libTab);return;}
  const item=e.target.closest('[data-lib-add]');if(item)libraryAdd(item.dataset.libAdd);
 });
 edit.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();openEditor();},true);
-close.addEventListener('click',()=>{editing=false;websiteMode=false;ui.classList.remove('is-active');panel.classList.remove('is-open');layer.style.pointerEvents='none';},true);
+close.addEventListener('click',()=>{editing=false;websiteMode=false;document.body.classList.remove('is-paper-editor-active');ui.classList.remove('is-active');panel.classList.remove('is-open');setMoreMenu(false);layer.style.pointerEvents='none';},true);
 new MutationObserver(()=>{
  if(!document.body.classList.contains('is-paper-fullscreen')){
-  editing=false;websiteMode=false;ui.classList.remove('is-active');panel.classList.remove('is-open');
+  editing=false;websiteMode=false;document.body.classList.remove('is-paper-editor-active');ui.classList.remove('is-active');panel.classList.remove('is-open');setMoreMenu(false);
   layer.style.pointerEvents='none';
   page.style.height='';page.style.transform='';page.style.width='';
   resetPaperSurfaceHeight();
