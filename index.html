@@ -804,26 +804,32 @@
           fullscreenClose.style.display = '';
           fullscreenClose.classList.remove('is-visible');
           fullscreenEdit.classList.remove('is-visible');
-          // Restore the same SVG paper at its raised envelope position. Then run
-          // a separate, explicit screen-space animation down to its measured resting
-          // position; do not rely on a CSS class transition that can be skipped when
-          // the SVG group is reparented.
+          // Restore the same SVG paper in its raised envelope position, then let
+          // the envelope's native transform transition carry it down into its final
+          // resting position. Keep this second motion in the original SVG's coordinate
+          // system; the fullscreen screen-space matrix is not valid after reparenting.
           control.classList.add('is-returning');
           restorePaperToEnvelope();
-          const raisedPaperRect = letterPaper.getBoundingClientRect();
+          letterPaper.getBoundingClientRect(); // Commit the raised start position.
           isPaperFullscreen = false;
           document.body.style.overflow = previousBodyOverflow;
 
-          const settleMotion = animatePaperBetweenRects(raisedPaperRect, normalPaperRect, 820);
-          settleMotion.finished.then(() => {
-            // The target rectangle matches the paper's native open position, so
-            // removing the temporary transform returns control to the original CSS.
-            control.classList.remove('is-returning', 'is-settling');
-            letterPaper.style.transition = '';
-            letterPaper.style.transform = '';
+          window.setTimeout(() => {
+            // Switching these classes animates from translateY(-450px) to
+            // translateY(-250px). Force style calculation so the transition starts
+            // consistently on mobile browsers too.
+            control.classList.remove('is-returning');
+            control.classList.add('is-settling');
             letterPaper.getBoundingClientRect();
-            fullscreenAnimating = false;
-          });
+
+            window.setTimeout(() => {
+              control.classList.remove('is-settling');
+              letterPaper.style.transition = '';
+              letterPaper.style.transform = '';
+              letterPaper.getBoundingClientRect();
+              fullscreenAnimating = false;
+            }, 980);
+          }, 790);
         }, 850);
       }
 
