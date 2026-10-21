@@ -27,14 +27,11 @@ function nextFlowY(){
  return bottom+Math.max(.035,24/Math.max(1,canvasHeight));
 }
 function chosen(){return items.find(o=>o.id===selected)||null;}
-function syncPaperSurfaceHeight(documentHeight){
- if(!document.body.classList.contains('is-paper-fullscreen'))return;
- const rect=layer.getBoundingClientRect();
- const localViewportHeight=layer.clientHeight||originalSurfaceHeight;
- const screenViewportHeight=Math.max(1,rect.height||canvasHeight);
- const localHeight=Math.max(originalSurfaceHeight,documentHeight*localViewportHeight/screenViewportHeight);
- surface.setAttribute('height',String(localHeight));
- paperShadow.setAttribute('height',String(Math.max(originalShadowHeight,localHeight)));
+function syncPaperSurfaceHeight(){
+ // Keep the SVG sheet and its shadow at their original dimensions.
+ // Longer page content scrolls inside the paper's embedded viewport instead.
+ surface.setAttribute('height',String(originalSurfaceHeight));
+ paperShadow.setAttribute('height',String(originalShadowHeight));
 }
 function resetPaperSurfaceHeight(){
  surface.setAttribute('height',String(originalSurfaceHeight));
