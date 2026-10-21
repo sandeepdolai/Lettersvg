@@ -38,8 +38,26 @@ function resetPaperSurfaceHeight(){
  paperShadow.setAttribute('height',String(originalShadowHeight));
 }
 function positionLayer(){
- if(!document.body.classList.contains('is-paper-fullscreen')){layer.style.display='none';layer.style.pointerEvents='none';resetPaperSurfaceHeight();return;}
+ const fullscreen=document.body.classList.contains('is-paper-fullscreen');
+ // The content layer is inside the original SVG paper. Keep it rendered when the
+ // paper returns to the envelope, rather than hiding the canvas on close.
  layer.style.display='block';
+ layer.style.opacity='1';
+ if(!fullscreen){
+  const localWidth=layer.clientWidth||803,localHeight=layer.clientHeight||690;
+  canvasWidth=localWidth;canvasHeight=localHeight;
+  contentScale=Math.min(2.2,Math.max(.65,localWidth/390));
+  layer.style.setProperty('--ls-content-scale',String(contentScale));
+  layer.style.pointerEvents='none';
+  layer.scrollTop=0;
+  page.style.width=localWidth+'px';
+  page.style.minHeight=localHeight+'px';
+  page.style.transform='none';
+  page.style.transformOrigin='0 0';
+  resetPaperSurfaceHeight();
+  draw();
+  return;
+ }
  const r=layer.getBoundingClientRect();if(!r.width||!r.height)return;
  canvasWidth=r.width;canvasHeight=r.height;
  const localWidth=layer.clientWidth||803,localHeight=layer.clientHeight||690;
@@ -237,9 +255,16 @@ ui.addEventListener('click',e=>{
 edit.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();openEditor();},true);
 close.addEventListener('click',()=>{editing=false;websiteMode=false;ui.classList.remove('is-active');panel.classList.remove('is-open');layer.style.pointerEvents='none';},true);
 new MutationObserver(()=>{
- if(!document.body.classList.contains('is-paper-fullscreen')){editing=false;websiteMode=false;ui.classList.remove('is-active');panel.classList.remove('is-open');layer.style.display='none';layer.style.pointerEvents='none';page.style.height='';page.style.transform='';page.style.width='';resetPaperSurfaceHeight();}
- else window.setTimeout(positionLayer,860);
+ if(!document.body.classList.contains('is-paper-fullscreen')){
+  editing=false;websiteMode=false;ui.classList.remove('is-active');panel.classList.remove('is-open');
+  layer.style.pointerEvents='none';
+  page.style.height='';page.style.transform='';page.style.width='';
+  resetPaperSurfaceHeight();
+  positionLayer();
+ } else window.setTimeout(positionLayer,860);
 }).observe(document.body,{attributes:true,attributeFilter:['class']});
+// The embedded page belongs to the paper at all times, even before fullscreen is opened.
+positionLayer();
 window.addEventListener('resize',()=>requestAnimationFrame(positionLayer));window.addEventListener('orientationchange',()=>setTimeout(positionLayer,120));
  if(window.visualViewport){window.visualViewport.addEventListener('resize',()=>requestAnimationFrame(positionLayer));window.visualViewport.addEventListener('scroll',()=>requestAnimationFrame(positionLayer));}
 draw();histButtons();
