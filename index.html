@@ -144,10 +144,9 @@
     }
     .paper-fullscreen.is-closing .paper-fullscreen-backdrop { opacity: 0; }
 
-    /* The original paper changes to pure white late in the opening move.
-       Keep the actual SVG sheet and fade away its edge and shadow, never clone it. */
-    #paper stop { transition: stop-color 400ms ease; }
-    #paper-surface { transition: stroke-opacity 400ms ease; }
+    /* One real sheet, with a stable white surface in both envelope and editor states. */
+    #paper stop { stop-color: #ffffff; transition: none; }
+    #paper-surface { filter: none !important; transition: stroke-opacity 400ms ease; }
     .paper-edge-highlight { transition: stroke-opacity 400ms ease; }
     .letter-paper.is-in-fullscreen .letter-shadow {
       opacity: .36;
@@ -155,7 +154,7 @@
     }
     body.paper-is-white #paper stop {
       stop-color: #ffffff;
-      transition: stop-color 400ms ease 350ms;
+      transition: none;
     }
     body.paper-is-white #paper-surface {
       stroke-opacity: 0;
@@ -760,8 +759,8 @@
         fullscreenText.classList.remove('is-visible');
         fullscreenEdit.setAttribute('aria-expanded', 'false');
 
-        // Update the transform box to include the page's expanded height.
-        paperLocalBox = letterPaper.getBBox();
+        // Keep the original paper bounds captured on open. The sheet itself is fixed-size;
+        // only the editable content scrolls, so closing never compresses or reshapes the paper.
         // Capture the in-flight visual position before cancelling an opening animation.
         const currentPaperRect = paperSurface.getBoundingClientRect();
         const raisedPaperRect = getRaisedPaperRect();
