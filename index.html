@@ -687,16 +687,20 @@
         return { animation: null, targetTransform: toTransform, finished };
       }
 
-      function restorePaperToEnvelope() {
+      function restorePaperToEnvelope(preserveFullscreenTransformBox = false) {
         if (!paperHomeParent) return;
         // Restore the original stationery dimensions after the page return animation.
         paperSurface.setAttribute('height', originalPaperHeight);
         letterShadow.setAttribute('height', originalShadowHeight);
-        letterPaper.classList.remove('is-in-fullscreen');
         letterPaper.style.transition = 'none';
         letterPaper.style.transform = '';
-        letterPaper.style.transformBox = '';
-        letterPaper.style.transformOrigin = '';
+        if (!preserveFullscreenTransformBox) {
+          letterPaper.classList.remove('is-in-fullscreen');
+          letterPaper.style.transformBox = '';
+          letterPaper.style.transformOrigin = '';
+        }
+        // During the downward settle keep transform-box:view-box and origin 0 0
+        // stable across reparenting. Reset them only once the native transition ends.
         if (paperHomeNextSibling && paperHomeNextSibling.parentNode === paperHomeParent) {
           paperHomeParent.insertBefore(letterPaper, paperHomeNextSibling);
         } else {
@@ -821,7 +825,7 @@
           // Use a native SVG CSS transition instead of WAAPI here: Chromium can hang
           // when WAAPI animates this SVG group after it contains a foreignObject.
           control.classList.add('is-returning');
-          restorePaperToEnvelope();
+          restorePaperToEnvelope(true);
 
           // Only hide the now-empty fullscreen overlay after the real paper has
           // been reparented to the visible envelope SVG.
@@ -836,6 +840,7 @@
             if (finalized) return;
             finalized = true;
             control.classList.remove('is-returning', 'is-settling');
+            letterPaper.classList.remove('is-in-fullscreen');
             letterPaper.style.transition = '';
             letterPaper.style.transform = '';
             letterPaper.style.transformBox = '';
