@@ -806,10 +806,12 @@
             activePaperAnimation = null;
           }
 
-          paperFullscreen.classList.remove('is-fullscreen', 'is-closing');
-          paperFullscreen.style.display = 'none';
+          // Keep the fullscreen overlay mounted and transparent while moving the
+          // paper out of it. Reparenting a foreignObject-bearing SVG group out of a
+          // display:none SVG has caused Chromium to stall during the next layout.
+          // The is-closing class already fades the backdrop to transparent.
+          paperFullscreen.classList.remove('is-fullscreen');
           paperFullscreen.setAttribute('aria-hidden', 'true');
-          document.body.classList.remove('is-paper-fullscreen');
           fullscreenClose.style.display = '';
           fullscreenClose.classList.remove('is-visible');
           fullscreenEdit.classList.remove('is-visible');
@@ -821,6 +823,11 @@
           control.classList.add('is-returning');
           restorePaperToEnvelope();
 
+          // Only hide the now-empty fullscreen overlay after the real paper has
+          // been reparented to the visible envelope SVG.
+          paperFullscreen.classList.remove('is-closing');
+          paperFullscreen.style.display = 'none';
+          document.body.classList.remove('is-paper-fullscreen');
           isPaperFullscreen = false;
           document.body.style.overflow = previousBodyOverflow;
 
