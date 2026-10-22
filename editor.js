@@ -116,15 +116,24 @@ function moveInk(e){
 function finishInk(e){if(!activeStroke||(e&&e.pointerId!==activePointerId))return;activeStroke=null;activeStrokePath=null;activePointerId=null;updateDrawingControls();}
 function undoInk(){if(!strokes.length)return;strokes.pop();activeStroke=null;activeStrokePath=null;activePointerId=null;draw();}
 function chooseInkColor(){
- panel.innerHTML='<div class="ls-panel-header"><div><h3>Ink color</h3><p>Choose a color for your next stroke</p></div><button class="ls-panel-close" data-do="close-panel" aria-label="Close panel">×</button></div><div class="ls-draw-color-grid">'+[['#111111','Black'],['#ed1763','Pink'],['#d92e36','Red'],['#e18a31','Orange'],['#d7ae20','Yellow'],['#39845c','Green'],['#347bc4','Blue'],['#8a56bb','Purple'],['#7d7d7d','Grey'],['#f7f7f7','White']].map(c=>'<button data-draw-color="'+c[0]+'" aria-label="'+c[1]+'" title="'+c[1]+'" style="--swatch:'+c[0]+'" class="'+(drawColor===c[0]?'is-picked':'')+'"></button>').join('')+'</div>';showPanel();
+ const colors=[
+  ['#ed1763','Pink'],['#ff2638','Red'],['#ff6b18','Orange'],['#ffd000','Yellow'],
+  ['#00ad70','Green'],['#00bfae','Turquoise'],['#07316e','Navy blue'],
+  ['#111111','Black'],['#626262','Dark gray'],['#a9a9a9','Gray'],['#ececec','Light gray'],
+  ['#ffffff','White'],['#56321f','Dark brown'],['#82451e','Brown']
+ ];
+ panel.innerHTML='<div class="ls-draw-color-grid" role="group" aria-label="Ink colors">'+colors.map(c=>'<button type="button" data-draw-color="'+c[0]+'" aria-label="'+c[1]+'" title="'+c[1]+'" style="--swatch:'+c[0]+'" class="'+(drawColor.toLowerCase()===c[0]?'is-picked':'')+'"></button>').join('')+'</div>';
+ panel.classList.add('is-color-palette');
+ ui.classList.add('is-color-palette-open');
+ showPanel();
 }
 function enterDrawingMode(){
- if(!editing||!document.body.classList.contains('is-paper-fullscreen'))return;drawingMode=true;selected=null;panel.classList.remove('is-open');setMoreMenu(false);ui.classList.add('is-drawing-mode');document.body.classList.add('is-paper-drawing-mode');
+ if(!editing||!document.body.classList.contains('is-paper-fullscreen'))return;drawingMode=true;selected=null;panel.classList.remove('is-open','is-color-palette');ui.classList.remove('is-color-palette-open');setMoreMenu(false);ui.classList.add('is-drawing-mode');document.body.classList.add('is-paper-drawing-mode');
  const next=ui.querySelector('[data-do="next"]');if(next){next.textContent='Done';next.disabled=false;}layer.style.overflowY='hidden';layer.style.touchAction='none';layer.style.pointerEvents='auto';layer.scrollTop=0;draw();updateDrawingControls();
  requestAnimationFrame(()=>{positionLayer();layer.style.overflowY='hidden';layer.style.touchAction='none';layer.style.pointerEvents='auto';});
 }
 function exitDrawingMode(){
- if(!drawingMode)return;finishInk();drawingMode=false;panel.classList.remove('is-open');ui.classList.remove('is-drawing-mode');document.body.classList.remove('is-paper-drawing-mode');layer.style.overflowY='hidden';layer.style.overscrollBehavior='none';layer.style.touchAction='none';layer.style.pointerEvents=(editing||photoEditorMode)?'auto':'none';
+ if(!drawingMode)return;finishInk();drawingMode=false;panel.classList.remove('is-open','is-color-palette');ui.classList.remove('is-color-palette-open','is-drawing-mode');document.body.classList.remove('is-paper-drawing-mode');layer.style.overflowY='hidden';layer.style.overscrollBehavior='none';layer.style.touchAction='none';layer.style.pointerEvents=(editing||photoEditorMode)?'auto':'none';
  const next=ui.querySelector('[data-do="next"]');if(next)next.textContent='Next';draw();histButtons();
 }
 function syncPaperSurfaceHeight(){
@@ -299,7 +308,7 @@ function openEditor(){if(!document.body.classList.contains('is-paper-fullscreen'
 function done(){editing=false;panel.classList.remove('is-open');ui.classList.remove('is-active');document.body.classList.remove('is-paper-editor-active');setMoreMenu(false);edit.classList.add('is-visible');layer.style.pointerEvents=photoEditorMode?'auto':'none';draw();}
 function setMoreMenu(open){const menu=ui.querySelector('.ls-more-menu'),button=ui.querySelector('.ls-more-button');if(menu)menu.classList.toggle('is-open',!!open);if(button)button.setAttribute('aria-expanded',open?'true':'false');}
 function showPanel(){setMoreMenu(false);panel.classList.add('is-open');}
-function hidePanel(){panel.classList.remove('is-open');ui.querySelectorAll('[data-tool]').forEach(b=>b.classList.remove('is-active'));const add=ui.querySelector('[data-do="quick-add"]');if(add)add.classList.remove('is-active');}
+function hidePanel(){panel.classList.remove('is-open','is-color-palette');ui.classList.remove('is-color-palette-open');ui.querySelectorAll('[data-tool]').forEach(b=>b.classList.remove('is-active'));const add=ui.querySelector('[data-do="quick-add"]');if(add)add.classList.remove('is-active');}
 function textPanel(){
  setMoreMenu(false);
  ui.querySelectorAll('[data-tool]').forEach(b=>b.classList.toggle('is-active',b.dataset.tool==='text'));
