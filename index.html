@@ -627,32 +627,6 @@
         letterPaper.style.transform = matrixForRect(rect, paperLocalBox);
       }
 
-      // Convert a rendered screen-space rectangle into this envelope SVG's
-      // user-coordinate system. This lets the sheet animate back inside the real
-      // envelope SVG, where the front folds can correctly cover the paper.
-      function screenRectToEnvelopeRect(rect) {
-        const screenMatrix = art.getScreenCTM();
-        if (!screenMatrix) return null;
-        const inverse = screenMatrix.inverse();
-        const transformPoint = (x, y) => ({
-          x: inverse.a * x + inverse.c * y + inverse.e,
-          y: inverse.b * x + inverse.d * y + inverse.f
-        });
-        const points = [
-          transformPoint(rect.left, rect.top),
-          transformPoint(rect.right, rect.top),
-          transformPoint(rect.right, rect.bottom),
-          transformPoint(rect.left, rect.bottom)
-        ];
-        const xs = points.map(point => point.x);
-        const ys = points.map(point => point.y);
-        const left = Math.min(...xs);
-        const top = Math.min(...ys);
-        const right = Math.max(...xs);
-        const bottom = Math.max(...ys);
-        return { left, top, width: right - left, height: bottom - top };
-      }
-
       // Animate explicit screen-space transforms with the Web Animations API.
       // This avoids depending on a CSS transition restarting after the SVG group
       // is reparented from one SVG element into another.
@@ -713,16 +687,20 @@
         return { animation: null, targetTransform: toTransform, finished };
       }
 
-      function restorePaperToEnvelope() {
+      function restorePaperToEnvelope(preserveFullscreenTransformBox = false) {
         if (!paperHomeParent) return;
         // Restore the original stationery dimensions after the page return animation.
         paperSurface.setAttribute('height', originalPaperHeight);
         letterShadow.setAttribute('height', originalShadowHeight);
-        letterPaper.classList.remove('is-in-fullscreen');
         letterPaper.style.transition = 'none';
         letterPaper.style.transform = '';
-        letterPaper.style.transformBox = '';
-        letterPaper.style.transformOrigin = '';
+        if (!preserveFullscreenTransformBox) {
+          letterPaper.classList.remove('is-in-fullscreen');
+          letterPaper.style.transformBox = '';
+          letterPaper.style.transformOrigin = '';
+        }
+        // During the downward settle keep transform-box:view-box and origin 0 0
+        // stable across reparenting. Reset them only once the native transition ends.
         if (paperHomeNextSibling && paperHomeNextSibling.parentNode === paperHomeParent) {
           paperHomeParent.insertBefore(letterPaper, paperHomeNextSibling);
         } else {
@@ -823,82 +801,75 @@
         closingMotion.finished.then(() => {
           if (!isPaperFullscreen || !fullscreenAnimating) return;
 
-          // Persist the raised endpoint before changing the SVG parent.
+          // The first, screen-space close animation has reached the measured raised
+          // position. Persist it, then restore the same SVG paper to its original
+          // parent before the downward settle so the red front folds stay in front.
           letterPaper.style.transform = closingMotion.targetTransform;
           if (closingMotion.animation && activePaperAnimation === closingMotion.animation) {
             closingMotion.animation.cancel();
             activePaperAnimation = null;
           }
 
-          // The second motion must occur inside the envelope SVG, not in the
-          // higher-z-index fullscreen overlay. Convert both measured screen bounds
-          // into the envelope's user coordinates before moving the same paper node.
-          const raisedEnvelopeRect = screenRectToEnvelopeRect(targetPaperRect);
-          const normalEnvelopeRect = screenRectToEnvelopeRect(normalPaperRect);
-          if (!raisedEnvelopeRect || !normalEnvelopeRect) {
-            fullscreenAnimating = false;
-            return;
-          }
-
-          paperFullscreen.classList.remove('is-fullscreen', 'is-closing');
-          paperFullscreen.style.display = 'none';
+          // Keep the fullscreen overlay mounted and transparent while moving the
+          // paper out of it. Reparenting a foreignObject-bearing SVG group out of a
+          // display:none SVG has caused Chromium to stall during the next layout.
+          // The is-closing class already fades the backdrop to transparent.
+          paperFullscreen.classList.remove('is-fullscreen');
           paperFullscreen.setAttribute('aria-hidden', 'true');
-          document.body.classList.remove('is-paper-fullscreen');
           fullscreenClose.style.display = '';
           fullscreenClose.classList.remove('is-visible');
           fullscreenEdit.classList.remove('is-visible');
 
-          // Keep the same paper at the same rendered raised position while
-          // restoring its original parent and z-order. Front folds are later SVG
-          // siblings, so they now naturally cover the lower part of the sheet.
-          letterPaper.classList.remove('is-in-fullscreen');
-          letterPaper.style.transition = 'none';
-          letterPaper.style.transformBox = 'view-box';
-          letterPaper.style.transformOrigin = '0 0';
-          letterPaper.style.transform = matrixForRect(raisedEnvelopeRect, paperLocalBox);
-          if (paperHomeNextSibling && paperHomeNextSibling.parentNode === paperHomeParent) {
-            paperHomeParent.insertBefore(letterPaper, paperHomeNextSibling);
-          } else {
-            paperHomeParent.appendChild(letterPaper);
-          }
-          restorePaperResourcesToEnvelope();
-          letterPaper.getBoundingClientRect();
+          // These existing CSS states are measured from the real envelope on open:
+          // -returning is the raised start; -settling is the lower resting position.
+          // Use a native SVG CSS transition instead of WAAPI here: Chromium can hang
+          // when WAAPI animates this SVG group after it contains a foreignObject.
+          control.classList.add('is-returning');
+          restorePaperToEnvelope(true);
+
+          // Only hide the now-empty fullscreen overlay after the real paper has
+          // been reparented to the visible envelope SVG.
+          paperFullscreen.classList.remove('is-closing');
+          paperFullscreen.style.display = 'none';
+          document.body.classList.remove('is-paper-fullscreen');
           isPaperFullscreen = false;
           document.body.style.overflow = previousBodyOverflow;
 
-          const prefersReducedMotion = window.matchMedia &&
-            window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-          const settleDuration = prefersReducedMotion ? 1 : 640;
-          const settleMotion = animatePaperBetweenRects(
-            raisedEnvelopeRect,
-            normalEnvelopeRect,
-            settleDuration
-          );
-
-          // Cleanup runs from either completion or a failsafe. This also prevents a
-          // mobile browser from leaving the paper over the envelope if it delays an
-          // animation.finished promise while the page is backgrounded.
-          let settleFinalized = false;
+          let finalized = false;
           const finishSettle = () => {
-            if (settleFinalized) return;
-            settleFinalized = true;
-            letterPaper.style.transform = settleMotion.targetTransform;
-            if (settleMotion.animation && activePaperAnimation === settleMotion.animation) {
-              settleMotion.animation.cancel();
-              activePaperAnimation = null;
-            }
+            if (finalized) return;
+            finalized = true;
             control.classList.remove('is-returning', 'is-settling');
+            letterPaper.classList.remove('is-in-fullscreen');
             letterPaper.style.transition = '';
             letterPaper.style.transform = '';
             letterPaper.style.transformBox = '';
             letterPaper.style.transformOrigin = '';
-            letterPaper.getBoundingClientRect();
             fullscreenAnimating = false;
           };
-          settleMotion.finished.then(finishSettle).catch(finishSettle);
-          window.setTimeout(finishSettle, settleDuration + 180);
+          const onSettleEnd = event => {
+            if (event.target === letterPaper && event.propertyName === 'transform') {
+              letterPaper.removeEventListener('transitionend', onSettleEnd);
+              finishSettle();
+            }
+          };
+          letterPaper.addEventListener('transitionend', onSettleEnd);
+
+          // Let the restored raised state reach a paint before changing the class.
+          // Avoid forcing synchronous SVG layout here: Chromium can stall when
+          // getBoundingClientRect is called on this reparented foreignObject group.
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              control.classList.remove('is-returning');
+              control.classList.add('is-settling');
+            });
+          });
+          // iOS/mobile browsers may throttle transitionend while backgrounded.
+          window.setTimeout(() => {
+            letterPaper.removeEventListener('transitionend', onSettleEnd);
+            finishSettle();
+          }, 1100);
         }).catch(() => {
-          // Keep the close path responsive if a browser rejects an animation promise.
           fullscreenAnimating = false;
         });
       }
