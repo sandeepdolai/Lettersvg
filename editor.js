@@ -84,9 +84,10 @@ function keyBrushSizeChange(e){
  else if(e.key==='Home'){e.preventDefault();setBrushSize(4);changed=true;}
  else if(e.key==='End'){e.preventDefault();setBrushSize(100);changed=true;}
  if(changed){
-  e.currentTarget.classList.add('is-adjusting');
+  const control=e.currentTarget;
+  control.classList.add('is-adjusting');
   clearTimeout(sizeAdjustAnimationTimer);
-  sizeAdjustAnimationTimer=window.setTimeout(()=>e.currentTarget.classList.remove('is-adjusting'),180);
+  sizeAdjustAnimationTimer=window.setTimeout(()=>control.classList.remove('is-adjusting'),180);
  }
 }
 function strokePathData(stroke){
