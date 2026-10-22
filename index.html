@@ -820,7 +820,6 @@
           // when WAAPI animates this SVG group after it contains a foreignObject.
           control.classList.add('is-returning');
           restorePaperToEnvelope();
-          letterPaper.getBoundingClientRect(); // Commit the raised starting frame.
 
           isPaperFullscreen = false;
           document.body.style.overflow = previousBodyOverflow;
@@ -834,7 +833,6 @@
             letterPaper.style.transform = '';
             letterPaper.style.transformBox = '';
             letterPaper.style.transformOrigin = '';
-            letterPaper.getBoundingClientRect();
             fullscreenAnimating = false;
           };
           const onSettleEnd = event => {
@@ -845,10 +843,14 @@
           };
           letterPaper.addEventListener('transitionend', onSettleEnd);
 
+          // Let the restored raised state reach a paint before changing the class.
+          // Avoid forcing synchronous SVG layout here: Chromium can stall when
+          // getBoundingClientRect is called on this reparented foreignObject group.
           requestAnimationFrame(() => {
-            control.classList.remove('is-returning');
-            control.classList.add('is-settling');
-            letterPaper.getBoundingClientRect(); // Start the native CSS transition.
+            requestAnimationFrame(() => {
+              control.classList.remove('is-returning');
+              control.classList.add('is-settling');
+            });
           });
           // iOS/mobile browsers may throttle transitionend while backgrounded.
           window.setTimeout(() => {
