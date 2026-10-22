@@ -124,7 +124,7 @@ function enterDrawingMode(){
  requestAnimationFrame(()=>{positionLayer();layer.style.overflowY='hidden';layer.style.touchAction='none';layer.style.pointerEvents='auto';});
 }
 function exitDrawingMode(){
- if(!drawingMode)return;finishInk();drawingMode=false;panel.classList.remove('is-open');ui.classList.remove('is-drawing-mode');document.body.classList.remove('is-paper-drawing-mode');layer.style.overflowY='auto';layer.style.touchAction='pan-y';layer.style.pointerEvents=(editing||photoEditorMode)?'auto':'none';
+ if(!drawingMode)return;finishInk();drawingMode=false;panel.classList.remove('is-open');ui.classList.remove('is-drawing-mode');document.body.classList.remove('is-paper-drawing-mode');layer.style.overflowY='hidden';layer.style.overscrollBehavior='none';layer.style.touchAction='none';layer.style.pointerEvents=(editing||photoEditorMode)?'auto':'none';
  const next=ui.querySelector('[data-do="next"]');if(next)next.textContent='Next';draw();histButtons();
 }
 function syncPaperSurfaceHeight(){
@@ -295,7 +295,7 @@ document.addEventListener('pointermove',moveBrushSizeChange,{passive:false});
 document.addEventListener('pointerup',finishInk);document.addEventListener('pointercancel',finishInk);
 document.addEventListener('pointerup',finishBrushSizeChange);document.addEventListener('pointercancel',finishBrushSizeChange);
 page.addEventListener('pointerdown',e=>{if(e.target===page&&editing){selected=null;draw();}});
-function openEditor(){if(!document.body.classList.contains('is-paper-fullscreen'))return;editing=true;photoEditorMode=true;document.body.classList.add('is-paper-editor-active');ui.classList.add('is-active');edit.classList.remove('is-visible');const old=document.getElementById('paper-fullscreen-text');if(old)old.classList.remove('is-visible');positionLayer();draw();}
+function openEditor(){if(!document.body.classList.contains('is-paper-fullscreen'))return;editing=true;photoEditorMode=true;document.body.classList.add('is-paper-editor-active');ui.classList.add('is-active');layer.style.overflowY='hidden';layer.style.overscrollBehavior='none';layer.style.touchAction='none';layer.scrollTop=0;edit.classList.remove('is-visible');const old=document.getElementById('paper-fullscreen-text');if(old)old.classList.remove('is-visible');positionLayer();draw();}
 function done(){editing=false;panel.classList.remove('is-open');ui.classList.remove('is-active');document.body.classList.remove('is-paper-editor-active');setMoreMenu(false);edit.classList.add('is-visible');layer.style.pointerEvents=photoEditorMode?'auto':'none';draw();}
 function setMoreMenu(open){const menu=ui.querySelector('.ls-more-menu'),button=ui.querySelector('.ls-more-button');if(menu)menu.classList.toggle('is-open',!!open);if(button)button.setAttribute('aria-expanded',open?'true':'false');}
 function showPanel(){setMoreMenu(false);panel.classList.add('is-open');}
@@ -398,7 +398,7 @@ ui.addEventListener('click',e=>{
  const item=e.target.closest('[data-lib-add]');if(item)libraryAdd(item.dataset.libAdd);
 });
 edit.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();openEditor();},true);
-close.addEventListener('click',()=>{editing=false;photoEditorMode=false;drawingMode=false;document.body.classList.remove('is-paper-editor-active','is-paper-drawing-mode');ui.classList.remove('is-active','is-drawing-mode');panel.classList.remove('is-open');setMoreMenu(false);layer.style.overflowY='auto';layer.style.touchAction='pan-y';layer.style.pointerEvents='none';draw();},true);
+close.addEventListener('click',()=>{editing=false;photoEditorMode=false;drawingMode=false;document.body.classList.remove('is-paper-editor-active','is-paper-drawing-mode');ui.classList.remove('is-active','is-drawing-mode');panel.classList.remove('is-open');setMoreMenu(false);layer.style.overflowY='hidden';layer.style.overscrollBehavior='none';layer.style.touchAction='none';layer.style.pointerEvents='none';draw();},true);
 // React only to actual fullscreen enter/exit transitions. This observer watches
 // body.class, but its own cleanup also changes classes; without edge detection it
 // can recursively trigger itself forever and freeze the close animation.
