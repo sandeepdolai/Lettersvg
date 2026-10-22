@@ -456,9 +456,9 @@ body.is-paper-drawing-mode .ls-ink-layer {
   position: absolute;
   z-index: 2;
   top: var(--ls-brush-size-position, 50%);
-  left: calc(50% - 105px);
-  width: 32px;
-  padding-right: 6px;
+  left: calc(50% - 118px);
+  width: 42px;
+  padding-right: 0;
   color: #fff;
   font: 700 24px/1 system-ui, -apple-system, sans-serif;
   font-variant-numeric: tabular-nums;
