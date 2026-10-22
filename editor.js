@@ -382,14 +382,27 @@ ui.addEventListener('click',e=>{
 });
 edit.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();openEditor();},true);
 close.addEventListener('click',()=>{editing=false;websiteMode=false;drawingMode=false;document.body.classList.remove('is-paper-editor-active','is-paper-drawing-mode');ui.classList.remove('is-active','is-drawing-mode');panel.classList.remove('is-open');setMoreMenu(false);layer.style.overflowY='auto';layer.style.touchAction='pan-y';layer.style.pointerEvents='none';draw();},true);
+// React only to actual fullscreen enter/exit transitions. This observer watches
+// body.class, but its own cleanup also changes classes; without edge detection it
+// can recursively trigger itself forever and freeze the close animation.
+let wasPaperFullscreen = document.body.classList.contains('is-paper-fullscreen');
 new MutationObserver(()=>{
- if(!document.body.classList.contains('is-paper-fullscreen')){
-  editing=false;websiteMode=false;drawingMode=false;document.body.classList.remove('is-paper-editor-active','is-paper-drawing-mode');ui.classList.remove('is-active','is-drawing-mode');panel.classList.remove('is-open');setMoreMenu(false);
+ const isPaperFullscreenNow = document.body.classList.contains('is-paper-fullscreen');
+ if(isPaperFullscreenNow === wasPaperFullscreen) return;
+ wasPaperFullscreen = isPaperFullscreenNow;
+
+ if(!isPaperFullscreenNow){
+  editing=false;websiteMode=false;drawingMode=false;
+  document.body.classList.remove('is-paper-editor-active','is-paper-drawing-mode');
+  ui.classList.remove('is-active','is-drawing-mode');
+  panel.classList.remove('is-open');setMoreMenu(false);
   layer.style.overflowY='auto';layer.style.touchAction='pan-y';layer.style.pointerEvents='none';
   page.style.height='';page.style.transform='';page.style.width='';
   resetPaperSurfaceHeight();
   positionLayer();
- } else window.setTimeout(positionLayer,860);
+ } else {
+  window.setTimeout(positionLayer,860);
+ }
 }).observe(document.body,{attributes:true,attributeFilter:['class']});
 // The embedded page belongs to the paper at all times, even before fullscreen is opened.
 positionLayer();
