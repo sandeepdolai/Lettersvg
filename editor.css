@@ -407,7 +407,7 @@ body.is-paper-drawing-mode .ls-ink-layer {
   position: fixed;
   z-index: 2147483647;
   top: 37%;
-  right: -27px;
+  right: 0;
   display: none;
   width: 56px;
   height: clamp(280px, 30vh, 460px);
@@ -430,9 +430,10 @@ body.is-paper-drawing-mode .ls-ink-layer {
   left: 50%;
   width: 14px;
   transform: translateX(-50%);
-  border: 1.5px solid #969691;
+  border: 1.5px solid rgba(255,255,255,.96);
   border-radius: 12px;
-  background: rgba(255,255,255,.36);
+  background: rgba(255,255,255,.72);
+  box-shadow: 0 0 0 1px rgba(0,0,0,.03);
   pointer-events: none;
 }
 .ls-brush-size-knob {
@@ -448,6 +449,33 @@ body.is-paper-drawing-mode .ls-ink-layer {
   background: #050505;
   box-shadow: 0 1px 2px rgba(0,0,0,.08);
   pointer-events: none;
+  will-change: top, transform;
+  transition: top 72ms cubic-bezier(.2,.8,.2,1), transform 130ms cubic-bezier(.2,.8,.2,1), box-shadow 130ms ease;
+}
+.ls-brush-size-value {
+  position: absolute;
+  z-index: 2;
+  top: var(--ls-brush-size-position, 50%);
+  left: calc(50% - 93px);
+  width: 42px;
+  padding-right: 0;
+  color: #fff;
+  font: 700 24px/1 system-ui, -apple-system, sans-serif;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  text-shadow: 0 1px 4px rgba(0,0,0,.24);
+  transform: translateY(-50%);
+  pointer-events: none;
+  user-select: none;
+  will-change: top, transform;
+  transition: top 72ms cubic-bezier(.2,.8,.2,1), transform 130ms cubic-bezier(.2,.8,.2,1);
+}
+.ls-brush-size-control.is-adjusting .ls-brush-size-knob {
+  transform: translate(-50%, -50%) scale(1.055);
+  box-shadow: 0 2px 8px rgba(0,0,0,.16);
+}
+.ls-brush-size-control.is-adjusting .ls-brush-size-value {
+  transform: translateY(-50%) scale(1.06);
 }
 .ls-brush-size-control:focus-visible .ls-brush-size-knob {
   outline: 3px solid rgba(0,0,0,.25);
