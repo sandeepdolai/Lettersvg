@@ -339,7 +339,68 @@ body.is-paper-fullscreen.is-paper-editor-active .paper-fullscreen-edit {
 .ls-editor-shell.is-drawing-mode .ls-next-button { width:104px; min-width:104px; height:76px; margin-left:auto; border-radius:27px; background:#e7e7e2; color:#111; font-size:16px !important; }
 .ls-editor-shell.is-drawing-mode .ls-next-button:disabled { background:#e7e7e2; color:#111; opacity:1; }
 .ls-editor-shell.is-drawing-mode .ls-topbar-spacer { flex:1 1 auto; }
-body.is-paper-drawing-mode #paper-page-content { background-color:#f7f7f7; background-image:radial-gradient(circle,rgba(190,190,190,.76) 1.45px,transparent 1.9px); background-size:32px 32px; background-position:5px 7px; border-radius:34px; overflow:hidden; }
+/* Make the existing paper canvas visible before the user enters drawing mode. */
+body.is-paper-editor-active:not(.is-paper-drawing-mode) #paper-page-content::before {
+ content:"";
+ position:absolute;
+ z-index:0;
+ inset:clamp(92px,12vh,132px) 10px clamp(150px,18vh,190px) 10px;
+ border-radius:28px;
+ background-color:#f7f7f7;
+ background-image:radial-gradient(circle,rgba(184,181,174,.62) 1.25px,transparent 1.85px);
+ background-size:28px 28px;
+ background-position:5px 7px;
+ box-shadow:inset 0 0 0 1px rgba(53,48,42,.10),0 4px 18px rgba(30,26,22,.035);
+ pointer-events:none;
+}
+.ls-canvas-hint {
+ position:fixed;
+ z-index:2147483643;
+ top:calc(50% - 6px);
+ left:50%;
+ display:flex;
+ flex-direction:column;
+ align-items:center;
+ gap:8px;
+ width:min(272px,calc(100vw - 64px));
+ padding:17px 18px 16px;
+ border:1px solid rgba(45,39,34,.09);
+ border-radius:19px;
+ background:rgba(255,255,255,.92);
+ box-shadow:0 8px 28px rgba(40,33,27,.07);
+ color:#272321;
+ text-align:center;
+ pointer-events:none;
+ transform:translate(-50%,-50%);
+ backdrop-filter:blur(8px);
+ -webkit-backdrop-filter:blur(8px);
+}
+.ls-canvas-hint-mark {
+ display:grid;
+ place-items:center;
+ width:35px;
+ height:35px;
+ border-radius:12px;
+ background:#ecebe6;
+ color:#292723;
+ font:300 27px/1 system-ui,-apple-system,sans-serif;
+}
+.ls-canvas-hint strong { font-size:15px; font-weight:650; letter-spacing:-.02em; }
+.ls-canvas-hint span:last-child { max-width:220px; color:#807a74; font-size:12px; line-height:1.45; }
+.ls-editor-shell.has-canvas-content .ls-canvas-hint,
+.ls-editor-shell.is-drawing-mode .ls-canvas-hint { display:none; }
+body.is-paper-drawing-mode #paper-page-content::before {
+ content:"";
+ position:absolute;
+ z-index:0;
+ inset:clamp(80px,11vh,160px) 8px clamp(120px,11vh,170px) 8px;
+ border-radius:34px;
+ background-color:#f7f7f7;
+ background-image:radial-gradient(circle,rgba(190,190,190,.76) 1.45px,transparent 1.9px);
+ background-size:32px 32px;
+ background-position:5px 7px;
+ pointer-events:none;
+}
 body.is-paper-drawing-mode #paper-page-viewport { overflow:hidden !important; touch-action:none !important; overscroll-behavior:none; border-radius:34px; background:#f7f7f7; }
 .ls-drawing-dock { position:fixed; z-index:2147483646; left:max(12px,env(safe-area-inset-left)); right:max(12px,env(safe-area-inset-right)); bottom:calc(0px + env(safe-area-inset-bottom)); height:132px; display:none; align-items:flex-end; justify-content:space-between; gap:12px; padding:0 0 14px; background:transparent; pointer-events:auto; }
 .ls-editor-shell.is-drawing-mode .ls-drawing-dock { display:flex; }
