@@ -407,7 +407,7 @@ body.is-paper-drawing-mode .ls-ink-layer {
   position: fixed;
   z-index: 2147483647;
   top: 37%;
-  right: -27px;
+  right: 0;
   display: none;
   width: 56px;
   height: clamp(280px, 30vh, 460px);
@@ -456,7 +456,7 @@ body.is-paper-drawing-mode .ls-ink-layer {
   position: absolute;
   z-index: 2;
   top: var(--ls-brush-size-position, 50%);
-  left: calc(50% - 118px);
+  left: calc(50% - 93px);
   width: 42px;
   padding-right: 0;
   color: #fff;
