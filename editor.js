@@ -80,8 +80,18 @@ function layersPanel(){
     '<button data-layer-action="delete" data-layer-id="'+o.id+'" aria-label="Delete layer" title="Delete">×</button>'+
    '</div></div>';
  }).join('');
+ const chosenLayer=chosen();
+ const signedRotation=chosenLayer?(((Number(chosenLayer.rotation)||0)+180)%360+360)%360-180:0;
+ const properties=chosenLayer?
+  '<div class="ls-layer-properties" data-layer-properties="'+chosenLayer.id+'">'+
+   '<div class="ls-layer-properties-heading"><strong>Selected layer</strong><span>'+escapeHTML(layerName(chosenLayer))+'</span></div>'+
+   '<label class="ls-layer-range"><span>Opacity <output data-layer-value="opacity">'+Math.round(clamp(Number(chosenLayer.opacity==null?1:chosenLayer.opacity),0,1)*100)+'%</output></span>'+
+    '<input type="range" min="10" max="100" step="1" value="'+Math.round(clamp(Number(chosenLayer.opacity==null?1:chosenLayer.opacity),.1,1)*100)+'" data-layer-range="opacity" data-layer-id="'+chosenLayer.id+'" aria-label="Layer opacity"></label>'+
+   '<label class="ls-layer-range"><span>Rotation <output data-layer-value="rotation">'+Math.round(signedRotation)+'°</output></span>'+
+    '<input type="range" min="-180" max="180" step="1" value="'+Math.round(signedRotation)+'" data-layer-range="rotation" data-layer-id="'+chosenLayer.id+'" aria-label="Layer rotation"></label>'+
+  '</div>':'';
  panel.innerHTML='<div class="ls-panel-header"><div><h3>Layers</h3><p>Arrange objects on your canvas</p></div><button class="ls-panel-close" data-do="close-panel" aria-label="Close panel">×</button></div>'+
-  (items.length?'<div class="ls-layers-list" role="list">'+rows+'</div>':'<div class="ls-layers-empty">Add a photo, text or element to create your first layer.</div>');
+  (items.length?'<div class="ls-layers-list" role="list">'+rows+'</div>':'<div class="ls-layers-empty">Add a photo, text or element to create your first layer.</div>')+properties;
  showPanel();
 }
 function reorderLayer(id,direction){
@@ -223,9 +233,28 @@ function applyCropPreset(id){
 }
 function rotateCrop(direction){
  if(!cropEdit)return;
+ const o=items.find(item=>item.id===cropEdit.id);if(!o)return;
  snapshotCrop();
- cropEdit.draft=fullCrop(((cropEdit.draft.rotation+(direction*90))%360+360)%360);
- cropEdit.preset='original';layoutCropEditor();
+ const natural=safeNatural(o),old=clone(cropEdit.draft);
+ const oldDims=rotatedImageDims(natural,old.rotation);
+ const nextRotation=((old.rotation+(direction*90))%360+360)%360;
+ const newDims=rotatedImageDims(natural,nextRotation);
+ const oldRect={x:old.x*oldDims.width,y:old.y*oldDims.height,w:old.width*oldDims.width,h:old.height*oldDims.height};
+ const oldCx=oldRect.x+oldRect.w/2,oldCy=oldRect.y+oldRect.h/2;
+ // Rotate the crop centre around the image centre. Keep its display ratio and
+ // approximate pixel area, so rotating doesn't discard the user's crop.
+ const center=direction>0
+  ?{x:oldDims.height-oldCy,y:oldCx}
+  :{x:oldCy,y:oldDims.width-oldCx};
+ const preset=CROP_PRESETS.find(item=>item.id===cropEdit.preset);
+ const targetRatio=preset&&typeof preset.ratio==='number'?preset.ratio:(cropEdit.preset==='original'?natural.width/natural.height:oldRect.w/Math.max(1,oldRect.h));
+ const area=Math.max(1,oldRect.w*oldRect.h);
+ let w=Math.sqrt(area*targetRatio),h=Math.sqrt(area/targetRatio);
+ const fit=Math.min(1,newDims.width/Math.max(1,w),newDims.height/Math.max(1,h));
+ w=Math.max(1,w*fit);h=Math.max(1,h*fit);
+ const x=clamp(center.x-w/2,0,newDims.width-w),y=clamp(center.y-h/2,0,newDims.height-h);
+ cropEdit.draft={x:x/newDims.width,y:y/newDims.height,width:w/newDims.width,height:h/newDims.height,rotation:nextRotation};
+ layoutCropEditor();
 }
 function resetCrop(){
  if(!cropEdit)return;
@@ -799,6 +828,29 @@ function libraryAdd(name){
  if(elems[name]){const e=elems[name];add(make(e.type,{shape:e.shape||'',value:e.value||'',size:e.size||30,color:'#bf9147',x:(1-e.w)/2,y:nextLayerY(),w:e.w,h:e.h}));return;}
  if(stickers[name]){const s=stickers[name];add(make('sticker',{value:s[0],color:s[1],size:64,x:.36,y:nextLayerY(),w:.28,h:.2}));}
 }
+ui.addEventListener('pointerdown',e=>{
+ const control=e.target.closest('[data-layer-range]');
+ if(control){control.dataset.initialValue=control.value;control.dataset.historyStarted='0';}
+});
+ui.addEventListener('input',e=>{
+ const control=e.target.closest('[data-layer-range]');if(!control)return;
+ const o=items.find(item=>String(item.id)===control.dataset.layerId);if(!o)return;
+ if(control.dataset.historyStarted!=='1'){saveHistory();control.dataset.historyStarted='1';}
+ if(control.dataset.layerRange==='opacity')o.opacity=clamp(Number(control.value)/100,.1,1);
+ else if(control.dataset.layerRange==='rotation')o.rotation=clamp(Number(control.value),-180,180);
+ clampLayerModel(o);
+ const value=ui.querySelector('[data-layer-value="'+control.dataset.layerRange+'"]');
+ if(value)value.textContent=control.dataset.layerRange==='opacity'?Math.round(o.opacity*100)+'%':Math.round(o.rotation)+'°';
+ draw();
+});
+ui.addEventListener('change',e=>{
+ const control=e.target.closest('[data-layer-range]');if(!control)return;
+ if(control.dataset.historyStarted==='1'&&control.value===control.dataset.initialValue){undoStack.pop();histButtons();}
+ control.dataset.historyStarted='0';control.dataset.initialValue=control.value;
+});
+document.addEventListener('pointerup',()=>{
+ ui.querySelectorAll('[data-layer-range][data-history-started="1"]').forEach(control=>{control.dataset.historyStarted='0';control.dataset.initialValue=control.value;});
+});
 ui.addEventListener('click',e=>{
  const cropAction=e.target.closest('[data-crop-action]');
  if(cropAction){
