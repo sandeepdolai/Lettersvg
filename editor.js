@@ -415,20 +415,55 @@ function renderInkLayer(documentHeight){
  inkLayer.setAttribute('overflow','hidden');
  inkLayer.style.overflow='hidden';
 
- // Clip at the actual paper bounds as well as the CSS viewport. This also clips
- // strokes saved by older versions, when points below the paper edge were allowed.
+ // Masks remove ink from earlier strokes. Eraser strokes are instructions for
+ // the masks, not visible white paths and not new artwork layers.
+ const defs=document.createElementNS(svgNS,'defs');
  const clip=document.createElementNS(svgNS,'clipPath');
  clip.setAttribute('id','lettersvg-ink-paper-clip');
  clip.setAttribute('clipPathUnits','userSpaceOnUse');
  const rect=document.createElementNS(svgNS,'rect');
  rect.setAttribute('x','0');rect.setAttribute('y','0');
  rect.setAttribute('width',String(inkWidth));rect.setAttribute('height',String(inkHeight));
- clip.append(rect);inkLayer.append(clip);
+ clip.append(rect);
+ defs.append(clip);
 
  const clippedInk=document.createElementNS(svgNS,'g');
+ clippedInk.setAttribute('class','ls-visible-ink');
  clippedInk.setAttribute('clip-path','url(#lettersvg-ink-paper-clip)');
- strokes.forEach(stroke=>clippedInk.append(makeInkPath(stroke)));
- inkLayer.append(clippedInk);
+
+ strokes.forEach((stroke,index)=>{
+  // Eraser paths only mask strokes that were drawn before them. Later drawing
+  // remains visible, matching the normal behavior of a paint-app eraser.
+  if(stroke.brush==='eraser')return;
+  const path=makeInkPath(stroke);
+  const laterErasers=strokes.slice(index+1).filter(candidate=>candidate.brush==='eraser');
+  if(laterErasers.length){
+   const mask=document.createElementNS(svgNS,'mask');
+   const maskId='lettersvg-ink-erase-mask-'+index;
+   mask.setAttribute('id',maskId);
+   mask.setAttribute('maskUnits','userSpaceOnUse');
+   mask.setAttribute('maskContentUnits','userSpaceOnUse');
+   mask.setAttribute('mask-type','luminance');
+   mask.style.maskType='luminance';
+   mask.setAttribute('x','0');mask.setAttribute('y','0');
+   mask.setAttribute('width',String(inkWidth));mask.setAttribute('height',String(inkHeight));
+   const visible=document.createElementNS(svgNS,'rect');
+   visible.setAttribute('x','0');visible.setAttribute('y','0');
+   visible.setAttribute('width',String(inkWidth));visible.setAttribute('height',String(inkHeight));
+   visible.setAttribute('fill','#fff');
+   mask.append(visible);
+   laterErasers.forEach(eraser=>{
+    const erasePath=makeInkPath(eraser);
+    erasePath.setAttribute('stroke','#000');
+    erasePath.removeAttribute('mask');
+    mask.append(erasePath);
+   });
+   defs.append(mask);
+   path.setAttribute('mask','url(#'+maskId+')');
+  }
+  clippedInk.append(path);
+ });
+ inkLayer.append(defs,clippedInk);
  Object.assign(inkLayer.style,{pointerEvents:drawingMode?'auto':'none',touchAction:'none'});
  page.append(inkLayer);updateDrawingControls();
 }
@@ -438,10 +473,21 @@ function inkPointFromEvent(e){
 }
 function startInk(e){
  if(!drawingMode||(e.button!==0&&e.pointerType==='mouse'))return;e.preventDefault();e.stopPropagation();
- const p=inkPointFromEvent(e),erasing=selectedBrush==='eraser';activeStroke={color:erasing?'#f7f7f7':drawColor,width:Math.round((brushWidths[selectedBrush]||4)*(brushSize/24)*10)/10,brush:selectedBrush,brushSize,points:[p]};strokes.push(activeStroke);activeStrokePath=makeInkPath(activeStroke);inkLayer.append(activeStrokePath);activePointerId=e.pointerId;try{inkLayer.setPointerCapture(e.pointerId);}catch(_){}updateDrawingControls();
+ const p=inkPointFromEvent(e);
+ activeStroke={color:drawColor,width:Math.round((brushWidths[selectedBrush]||4)*(brushSize/24)*10)/10,brush:selectedBrush,brushSize,points:[p]};
+ strokes.push(activeStroke);
+ activePointerId=e.pointerId;
+ renderInkLayer(Math.max(1,parseFloat(page.style.height)||canvasHeight));
+ try{inkLayer.setPointerCapture(e.pointerId);}catch(_){}
 }
 function moveInk(e){
- if(!drawingMode||!activeStroke||e.pointerId!==activePointerId)return;e.preventDefault();const p=inkPointFromEvent(e),last=activeStroke.points[activeStroke.points.length-1],dx=p.x-last.x,dy=p.y-last.y;if(dx*dx+dy*dy<0.000002)return;activeStroke.points.push(p);activeStrokePath.setAttribute('d',strokePathData(activeStroke));
+ if(!drawingMode||!activeStroke||e.pointerId!==activePointerId)return;e.preventDefault();
+ const p=inkPointFromEvent(e),last=activeStroke.points[activeStroke.points.length-1],dx=p.x-last.x,dy=p.y-last.y;
+ if(dx*dx+dy*dy<0.000002)return;
+ activeStroke.points.push(p);
+ // Rebuild the SVG masks while a stroke is in progress so the eraser effect
+ // is visible immediately, rather than drawing an opaque stroke on top.
+ renderInkLayer(Math.max(1,parseFloat(page.style.height)||canvasHeight));
 }
 function finishInk(e){if(!activeStroke||(e&&e.pointerId!==activePointerId))return;activeStroke=null;activeStrokePath=null;activePointerId=null;updateDrawingControls();}
 function undoInk(){if(!strokes.length)return;strokes.pop();activeStroke=null;activeStrokePath=null;activePointerId=null;draw();}
