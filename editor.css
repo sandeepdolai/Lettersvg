@@ -357,10 +357,10 @@ body.is-paper-editor-active:not(.is-paper-drawing-mode) #paper-page-content::bef
  content:"";
  position:absolute;
  z-index:0;
- /* Use canvas-relative percentages: viewport-height insets were being scaled
-    with the embedded SVG and collapsing the visible canvas on mobile. */
- inset:17.25% 1.25% 17.25% 1.25%;
- border-radius:28px;
+ /* This is the editable canvas itself: fill its entire 16:9 bounds.
+    Vertical insets made the mobile canvas look like a shallow horizontal strip. */
+ inset:0;
+ border-radius:24px;
  background-color:#f7f7f7;
  background-image:radial-gradient(circle,rgba(184,181,174,.62) 1.25px,transparent 1.85px);
  background-size:28px 28px;
@@ -376,11 +376,11 @@ body.is-paper-editor-active:not(.is-paper-drawing-mode) #paper-page-content::bef
  display:flex;
  flex-direction:column;
  align-items:center;
- gap:8px;
- width:min(272px,calc(100vw - 64px));
- padding:17px 18px 16px;
+ gap:6px;
+ width:min(220px,calc(100vw - 80px));
+ padding:14px 15px 13px;
  border:1px solid rgba(45,39,34,.09);
- border-radius:19px;
+ border-radius:17px;
  background:rgba(255,255,255,.92);
  box-shadow:0 8px 28px rgba(40,33,27,.07);
  color:#272321;
@@ -393,15 +393,15 @@ body.is-paper-editor-active:not(.is-paper-drawing-mode) #paper-page-content::bef
 .ls-canvas-hint-mark {
  display:grid;
  place-items:center;
- width:35px;
- height:35px;
- border-radius:12px;
+ width:32px;
+ height:32px;
+ border-radius:11px;
  background:#ecebe6;
  color:#292723;
  font:300 27px/1 system-ui,-apple-system,sans-serif;
 }
-.ls-canvas-hint strong { font-size:15px; font-weight:650; letter-spacing:-.02em; }
-.ls-canvas-hint span:last-child { max-width:220px; color:#807a74; font-size:12px; line-height:1.45; }
+.ls-canvas-hint strong { font-size:14px; font-weight:650; letter-spacing:-.02em; }
+.ls-canvas-hint span:last-child { max-width:190px; color:#807a74; font-size:11px; line-height:1.4; }
 .ls-editor-shell.has-canvas-content .ls-canvas-hint,
 .ls-editor-shell.is-drawing-mode .ls-canvas-hint { display:none; }
 /* The drawing background belongs to the actual paper viewport, not the
