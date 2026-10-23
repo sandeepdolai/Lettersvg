@@ -1,10 +1,10 @@
 (() => {
 'use strict';
 const fs=document.getElementById('paper-fullscreen'), surface=document.getElementById('paper-surface'),
-edit=document.getElementById('paper-fullscreen-edit'), close=document.getElementById('paper-fullscreen-close'),
+edit=document.getElementById('paper-fullscreen-edit'), fullscreenMenu=document.getElementById('paper-fullscreen-text'), close=document.getElementById('paper-fullscreen-close'),
 layer=document.getElementById('paper-page-viewport'), page=document.getElementById('paper-page-content'),
 letterPaper=document.getElementById('letter-paper'), paperShadow=letterPaper&&letterPaper.querySelector('.letter-shadow');
-if(!fs||!surface||!edit||!close||!layer||!page||!letterPaper||!paperShadow)return;
+if(!fs||!surface||!edit||!fullscreenMenu||!close||!layer||!page||!letterPaper||!paperShadow)return;
 const originalSurfaceHeight=Number(surface.getAttribute('height'))||690;
 const originalShadowHeight=Number(paperShadow.getAttribute('height'))||originalSurfaceHeight;
 let items=[],selected=null,nextId=1,editing=false,photoEditorMode=false,drawingMode=false,selectedBrush='marker',drawColor='#ed1763',brushSize=24,sizePointerId=null,strokes=[],activeStroke=null,activeStrokePath=null,activePointerId=null,tab='stickers',undoStack=[],redoStack=[],drag=null,cropEdit=null,contentScale=1,canvasWidth=390,canvasHeight=844,layoutGeometry=new Map();
@@ -898,7 +898,22 @@ ui.addEventListener('click',e=>{
  const item=e.target.closest('[data-lib-add]');if(item)libraryAdd(item.dataset.libAdd);
 });
 
-edit.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();openEditor();},true);
+
+// The fullscreen Edit button opens the compact Text / Add Photo / Library menu.
+// Keep editor entry tied to an explicit menu choice instead of hijacking this click.
+fullscreenMenu.addEventListener('click',event=>{
+ const action=event.target.closest('[data-fullscreen-action]');
+ if(!action)return;
+ event.preventDefault();
+ event.stopPropagation();
+ fullscreenMenu.classList.remove('is-visible');
+ edit.setAttribute('aria-expanded','false');
+ openEditor();
+ if(action.dataset.fullscreenAction==='text')textPanel();
+ else if(action.dataset.fullscreenAction==='photo')choosePhoto(false);
+ else if(action.dataset.fullscreenAction==='library')libraryPanel('stickers');
+});
+
 close.addEventListener('click',()=>{editing=false;photoEditorMode=false;drawingMode=false;document.body.classList.remove('is-paper-editor-active','is-paper-drawing-mode');ui.classList.remove('is-active','is-drawing-mode');panel.classList.remove('is-open');setMoreMenu(false);layer.style.overflowY='hidden';layer.style.overscrollBehavior='none';layer.style.touchAction='none';layer.style.pointerEvents='none';draw();},true);
 // React only to actual fullscreen enter/exit transitions. This observer watches
 // body.class, but its own cleanup also changes classes; without edge detection it
