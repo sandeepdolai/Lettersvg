@@ -156,6 +156,44 @@ test("Draw mode uses the bounded paper viewport and records a stroke", async ({ 
   await expect(page.locator("#letter-paper")).toHaveCount(1);
 });
 
+test("the visible editing canvas fills the 16:9 surface instead of a shallow strip", async ({ page }) => {
+  await openRealPaper(page);
+  const menu = await openEditMenu(page);
+  await menu.getByRole("button", { name: "Library" }).click();
+  await expect(page.locator("body")).toHaveClass(/is-paper-editor-active/);
+  await page.locator("[data-do=\"close-panel\"]").click();
+
+  const canvas = page.locator("#paper-page-viewport");
+  const content = page.locator("#paper-page-content");
+  const bounds = await canvas.boundingBox();
+  expect(bounds).not.toBeNull();
+  expect(Math.abs(bounds.width / bounds.height - 16 / 9)).toBeLessThan(0.04);
+
+  // The pre-content surface must occupy the entire real canvas, not a centered
+  // inset with large empty bands at the top and bottom.
+  const background = await content.evaluate(el => {
+    const style = getComputedStyle(el, "::before");
+    return {
+      top: style.top,
+      right: style.right,
+      bottom: style.bottom,
+      left: style.left,
+      width: style.width,
+      height: style.height
+    };
+  });
+  expect(background.top).toBe("0px");
+  expect(background.right).toBe("0px");
+  expect(background.bottom).toBe("0px");
+  expect(background.left).toBe("0px");
+  expect(Math.abs(Number.parseFloat(background.width) / Math.max(1, Number.parseFloat(background.height)) - 16 / 9)).toBeLessThan(0.04);
+
+  const hint = await page.locator(".ls-canvas-hint").boundingBox();
+  expect(hint).not.toBeNull();
+  expect(hint.width).toBeLessThan(bounds.width * 0.55);
+  expect(hint.height).toBeLessThan(bounds.height * 0.6);
+});
+
 test("fullscreen canvas keeps the 16:9 target on desktop and mobile", async ({ page }) => {
   await openRealPaper(page);
   const canvas = page.locator("#paper-page-viewport");
