@@ -357,8 +357,8 @@ body.is-paper-editor-active:not(.is-paper-drawing-mode) #paper-page-content::bef
  content:"";
  position:absolute;
  z-index:0;
- inset:clamp(92px,12vh,132px) 10px clamp(150px,18vh,190px) 10px;
- border-radius:28px;
+ inset:0;
+ border-radius:34px;
  background-color:#f7f7f7;
  background-image:radial-gradient(circle,rgba(184,181,174,.62) 1.25px,transparent 1.85px);
  background-size:28px 28px;
@@ -406,7 +406,7 @@ body.is-paper-drawing-mode #paper-page-content::before {
  content:"";
  position:absolute;
  z-index:0;
- inset:clamp(80px,11vh,160px) 8px clamp(120px,11vh,170px) 8px;
+ inset:0;
  border-radius:34px;
  background-color:#f7f7f7;
  background-image:radial-gradient(circle,rgba(190,190,190,.76) 1.45px,transparent 1.9px);
