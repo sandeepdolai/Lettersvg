@@ -99,8 +99,30 @@ function makeInkPath(stroke){
  const path=document.createElementNS(svgNS,'path');path.setAttribute('d',strokePathData(stroke));path.setAttribute('fill','none');path.setAttribute('stroke',stroke.color);path.setAttribute('stroke-width',String(stroke.width));path.setAttribute('stroke-linecap','round');path.setAttribute('stroke-linejoin','round');path.setAttribute('vector-effect','non-scaling-stroke');return path;
 }
 function renderInkLayer(documentHeight){
- inkLayer.replaceChildren();inkLayer.setAttribute('viewBox','0 0 '+Math.max(1,canvasWidth)+' '+Math.max(1,documentHeight));inkLayer.setAttribute('width',String(Math.max(1,canvasWidth)));inkLayer.setAttribute('height',String(Math.max(1,documentHeight)));
- strokes.forEach(stroke=>inkLayer.append(makeInkPath(stroke)));Object.assign(inkLayer.style,{pointerEvents:drawingMode?'auto':'none',touchAction:'none'});page.append(inkLayer);updateDrawingControls();
+ const inkWidth=Math.max(1,canvasWidth),inkHeight=Math.max(1,documentHeight);
+ inkLayer.replaceChildren();
+ inkLayer.setAttribute('viewBox','0 0 '+inkWidth+' '+inkHeight);
+ inkLayer.setAttribute('width',String(inkWidth));
+ inkLayer.setAttribute('height',String(inkHeight));
+ inkLayer.setAttribute('overflow','hidden');
+ inkLayer.style.overflow='hidden';
+
+ // Clip at the actual paper bounds as well as the CSS viewport. This also clips
+ // strokes saved by older versions, when points below the paper edge were allowed.
+ const clip=document.createElementNS(svgNS,'clipPath');
+ clip.setAttribute('id','lettersvg-ink-paper-clip');
+ clip.setAttribute('clipPathUnits','userSpaceOnUse');
+ const rect=document.createElementNS(svgNS,'rect');
+ rect.setAttribute('x','0');rect.setAttribute('y','0');
+ rect.setAttribute('width',String(inkWidth));rect.setAttribute('height',String(inkHeight));
+ clip.append(rect);inkLayer.append(clip);
+
+ const clippedInk=document.createElementNS(svgNS,'g');
+ clippedInk.setAttribute('clip-path','url(#lettersvg-ink-paper-clip)');
+ strokes.forEach(stroke=>clippedInk.append(makeInkPath(stroke)));
+ inkLayer.append(clippedInk);
+ Object.assign(inkLayer.style,{pointerEvents:drawingMode?'auto':'none',touchAction:'none'});
+ page.append(inkLayer);updateDrawingControls();
 }
 function inkPointFromEvent(e){
  const rect=inkLayer.getBoundingClientRect(),docHeight=Math.max(1,parseFloat(page.style.height)||canvasHeight),sx=canvasWidth/Math.max(1,rect.width),sy=docHeight/Math.max(1,rect.height);
