@@ -579,13 +579,26 @@
         fullscreenArt.setAttribute('viewBox', `0 0 ${w} ${h}`);
       }
 
-      // The editing canvas is a responsive viewport, not a fixed-ratio sheet.
-      // Fill the available device viewport so the paper and its editable content
-      // can adapt to portrait phones, landscape phones, tablets, and desktops.
+      // Keep the editor canvas at the exact native paper ratio (803 × 690).
+      // Contain the real sheet inside the available viewport without stretching it.
+      // Portrait phones get a centered landscape canvas; wider viewports use the
+      // available height. The single SVG paper and its editor content scale together.
       function getContainedFullscreenRect() {
-        const w = window.innerWidth || document.documentElement.clientWidth;
-        const h = window.innerHeight || document.documentElement.clientHeight;
-        return { left: 0, top: 0, width: w, height: h };
+        const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
+        const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+        const paperWidth = 803;
+        const paperHeight = 690;
+        const paperRatio = paperWidth / paperHeight;
+
+        const width = Math.min(viewportWidth, viewportHeight * paperRatio);
+        const height = width / paperRatio;
+
+        return {
+          left: (viewportWidth - width) / 2,
+          top: (viewportHeight - height) / 2,
+          width,
+          height
+        };
       }
 
       // The normal and raised positions are measured from the real SVG paper
