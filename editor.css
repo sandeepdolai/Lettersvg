@@ -357,7 +357,9 @@ body.is-paper-editor-active:not(.is-paper-drawing-mode) #paper-page-content::bef
  content:"";
  position:absolute;
  z-index:0;
- inset:clamp(92px,12vh,132px) 10px clamp(150px,18vh,190px) 10px;
+ /* Use canvas-relative percentages: viewport-height insets were being scaled
+    with the embedded SVG and collapsing the visible canvas on mobile. */
+ inset:17.25% 1.25% 17.25% 1.25%;
  border-radius:28px;
  background-color:#f7f7f7;
  background-image:radial-gradient(circle,rgba(184,181,174,.62) 1.25px,transparent 1.85px);
@@ -406,7 +408,8 @@ body.is-paper-drawing-mode #paper-page-content::before {
  content:"";
  position:absolute;
  z-index:0;
- inset:clamp(80px,11vh,160px) 8px clamp(120px,11vh,170px) 8px;
+ /* Keep the drawing surface proportional to the same 16:9 canvas. */
+ inset:17.25% 1% 17.25% 1%;
  border-radius:34px;
  background-color:#f7f7f7;
  background-image:radial-gradient(circle,rgba(190,190,190,.76) 1.45px,transparent 1.9px);
