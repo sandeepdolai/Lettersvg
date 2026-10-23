@@ -611,3 +611,14 @@ body.is-paper-drawing-mode .ls-ink-layer {
   border: 3px solid #e7e7e2;
   box-shadow: 0 0 0 2px #fff;
 }
+
+/* All editor chrome is anchored to the measured dotted-paper bounds by editor.js. */
+.ls-editor-topbar,.ls-editor-dock,.ls-drawing-dock,.ls-brush-size-control,.ls-editor-panel {
+ position:fixed;
+ box-sizing:border-box;
+}
+.ls-site-page { overflow:hidden; }
+.ls-editor-shell.is-drawing-mode.is-color-palette-open .ls-editor-panel.is-color-palette {
+ width:auto;
+ max-width:none;
+}
