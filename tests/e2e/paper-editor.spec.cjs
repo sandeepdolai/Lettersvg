@@ -99,11 +99,19 @@ test("text is added to the real paper and survives close/reopen", async ({ page 
   await expect.poll(() =>
     page.locator("#letter-paper").evaluate(node => node.closest("svg")?.id)
   ).toBe("envelope-art");
+  // The close sequence removes this class only after the paper has completed its
+  // downward settle into the envelope.
+  await expect(page.locator("#letter-paper")).not.toHaveClass(/is-in-fullscreen/);
   await expect(page.locator("#paper-page-content .ls-object-text")).toHaveCount(1);
   await expect(page.locator("#letter-paper")).toHaveCount(1);
 
-  // Reopen the same envelope; no cloned or replacement sheet should be introduced.
-  await page.locator("#paper-surface").click();
+  // Reopen the same envelope by tapping the exposed portion of the same sheet.
+  const reopenedSheet = page.locator("#paper-surface");
+  const reopenedBounds = await reopenedSheet.boundingBox();
+  expect(reopenedBounds).not.toBeNull();
+  await reopenedSheet.click({
+    position: { x: reopenedBounds.width * 0.5, y: reopenedBounds.height * 0.32 }
+  });
   await expect(page.locator("body")).toHaveClass(/is-paper-fullscreen/);
   await expect(page.locator("#letter-paper")).toHaveCount(1);
   await expect(page.locator("#paper-page-content .ls-object-text")).toHaveCount(1);
