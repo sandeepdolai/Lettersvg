@@ -82,7 +82,7 @@ html:has(body.is-paper-fullscreen.is-paper-editor-active) {
 
 /* Text blocks grow to fit measured wrapping. Positioning/collision layout is computed per viewport. */
 .ls-object-copy { min-width: 0; min-height: 0; overflow-wrap: anywhere; }
-.ls-object { max-width: 100%; }
+.ls-object { max-width: none; }
 @media (max-width: 560px) {
   .ls-object-actions { max-width: calc(100vw - 24px); }
   .ls-object-copy { line-height: 1.2; }
@@ -357,10 +357,10 @@ body.is-paper-editor-active:not(.is-paper-drawing-mode) #paper-page-content::bef
  content:"";
  position:absolute;
  z-index:0;
- /* Use canvas-relative percentages: viewport-height insets were being scaled
-    with the embedded SVG and collapsing the visible canvas on mobile. */
- inset:17.25% 1.25% 17.25% 1.25%;
- border-radius:28px;
+ /* This is the editable canvas itself: fill its entire 16:9 bounds.
+    Vertical insets made the mobile canvas look like a shallow horizontal strip. */
+ inset:0;
+ border-radius:24px;
  background-color:#f7f7f7;
  background-image:radial-gradient(circle,rgba(184,181,174,.62) 1.25px,transparent 1.85px);
  background-size:28px 28px;
@@ -376,11 +376,11 @@ body.is-paper-editor-active:not(.is-paper-drawing-mode) #paper-page-content::bef
  display:flex;
  flex-direction:column;
  align-items:center;
- gap:8px;
- width:min(272px,calc(100vw - 64px));
- padding:17px 18px 16px;
+ gap:6px;
+ width:min(200px,52vw,calc(100vw - 80px));
+ padding:14px 15px 13px;
  border:1px solid rgba(45,39,34,.09);
- border-radius:19px;
+ border-radius:17px;
  background:rgba(255,255,255,.92);
  box-shadow:0 8px 28px rgba(40,33,27,.07);
  color:#272321;
@@ -393,15 +393,15 @@ body.is-paper-editor-active:not(.is-paper-drawing-mode) #paper-page-content::bef
 .ls-canvas-hint-mark {
  display:grid;
  place-items:center;
- width:35px;
- height:35px;
- border-radius:12px;
+ width:32px;
+ height:32px;
+ border-radius:11px;
  background:#ecebe6;
  color:#292723;
  font:300 27px/1 system-ui,-apple-system,sans-serif;
 }
-.ls-canvas-hint strong { font-size:15px; font-weight:650; letter-spacing:-.02em; }
-.ls-canvas-hint span:last-child { max-width:220px; color:#807a74; font-size:12px; line-height:1.45; }
+.ls-canvas-hint strong { font-size:14px; font-weight:650; letter-spacing:-.02em; }
+.ls-canvas-hint span:last-child { max-width:190px; color:#807a74; font-size:11px; line-height:1.4; }
 .ls-editor-shell.has-canvas-content .ls-canvas-hint,
 .ls-editor-shell.is-drawing-mode .ls-canvas-hint { display:none; }
 /* The drawing background belongs to the actual paper viewport, not the
@@ -771,3 +771,238 @@ body.is-paper-drawing-mode #paper-page-content::before {
 .ls-layer-range>span { display:flex;align-items:center;justify-content:space-between;gap:8px; }
 .ls-layer-range output { color:#39312c;font-size:10px;font-variant-numeric:tabular-nums; }
 .ls-layer-range input { width:100%;min-width:0;height:24px;margin:0;accent-color:#a92f2b;cursor:pointer; }
+
+
+/* Pinterest-inspired library: image-led, waterfall browsing cards.
+   This is a styling layer only; all existing data-lib-add actions are preserved. */
+.ls-editor-panel {
+  border-color: rgba(25,25,25,.08);
+  border-radius: 22px;
+  background: #fff;
+  box-shadow: 0 16px 48px rgba(20,20,20,.16);
+  color: #171717;
+}
+.ls-panel-header h3 { color:#171717; font-size:19px; letter-spacing:-.035em; }
+.ls-panel-header p { color:#767676; font-size:11px; }
+.ls-library-tabs {
+  display:flex;
+  gap:7px;
+  padding:0;
+  margin:0 0 14px;
+  background:transparent;
+  overflow-x:auto;
+  scrollbar-width:none;
+}
+.ls-library-tabs::-webkit-scrollbar { display:none; }
+.ls-library-tabs button {
+  flex:0 0 auto;
+  min-height:36px;
+  padding:0 15px;
+  border:0;
+  border-radius:999px;
+  background:#f1f1f1;
+  color:#222;
+  font-size:12px!important;
+  font-weight:650!important;
+}
+.ls-library-tabs button.is-active {
+  background:#171717;
+  color:#fff;
+  box-shadow:none;
+}
+.ls-library-grid.ls-pin-grid {
+  display:block;
+  column-count:2;
+  column-gap:12px;
+  padding:1px 1px 5px;
+}
+.ls-pin-grid .ls-pin-card,
+.ls-pin-grid .ls-pin-layout {
+  position:relative;
+  display:inline-flex;
+  width:100%;
+  min-width:0;
+  margin:0 0 12px;
+  padding:0;
+  flex-direction:column;
+  align-items:stretch;
+  vertical-align:top;
+  break-inside:avoid;
+  overflow:hidden;
+  border:0;
+  border-radius:17px;
+  background:#f4f4f4;
+  color:#191919;
+  text-align:left;
+  box-shadow:none;
+  transition:transform 140ms ease, box-shadow 140ms ease;
+}
+.ls-pin-grid .ls-pin-card:hover,
+.ls-pin-grid .ls-pin-layout:hover {
+  background:#f4f4f4;
+  border-color:transparent;
+  box-shadow:0 5px 16px rgba(0,0,0,.1);
+  transform:translateY(-1px);
+}
+.ls-pin-art {
+  position:relative;
+  display:grid;
+  place-items:center;
+  width:100%;
+  min-height:94px;
+  overflow:hidden;
+  border-radius:17px;
+  isolation:isolate;
+}
+.ls-pin-art::before,
+.ls-pin-art::after {
+  content:"";
+  position:absolute;
+  z-index:-1;
+  border-radius:50%;
+  opacity:.62;
+}
+.ls-pin-art::before { width:76px; height:76px; top:-20px; right:-15px; background:rgba(255,255,255,.65); }
+.ls-pin-art::after { width:52px; height:52px; bottom:-22px; left:-8px; background:rgba(255,255,255,.55); }
+.ls-pin-card[data-pin-look="blush"] .ls-pin-art { background:#f5d9d8; min-height:132px; }
+.ls-pin-card[data-pin-look="butter"] .ls-pin-art { background:#f1e4b5; min-height:104px; }
+.ls-pin-card[data-pin-look="rose"] .ls-pin-art { background:#ead5df; min-height:144px; }
+.ls-pin-card[data-pin-look="cream"] .ls-pin-art { background:#eee7dc; min-height:104px; }
+.ls-pin-card[data-pin-look="lilac"] .ls-pin-art { background:#e5dff0; min-height:128px; }
+.ls-pin-card[data-pin-look="mint"] .ls-pin-art { background:#d9e9df; min-height:100px; }
+.ls-pin-card[data-pin-look="night"] .ls-pin-art { background:#273047; min-height:142px; }
+.ls-pin-card[data-pin-look="sage"] .ls-pin-art { background:#dce3d5; min-height:108px; }
+.ls-pin-card[data-pin-look="peach"] .ls-pin-art { background:#f2daca; min-height:122px; }
+.ls-pin-card[data-pin-look="sky"] .ls-pin-art { background:#dbe7ee; min-height:110px; }
+.ls-pin-art .ls-library-symbol {
+  color:#292522;
+  font-size:45px;
+  text-shadow:0 2px 1px rgba(255,255,255,.18);
+}
+.ls-pin-card[data-pin-look="night"] .ls-pin-art .ls-library-symbol { color:#fff4df; }
+.ls-pin-card[data-pin-look="rose"] .ls-pin-art .ls-library-symbol,
+.ls-pin-card[data-pin-look="blush"] .ls-pin-art .ls-library-symbol { color:#b62e43; }
+.ls-pin-title {
+  display:block;
+  padding:10px 11px 12px;
+  color:#191919;
+  font-size:12px;
+  font-weight:650;
+  line-height:1.25;
+}
+.ls-pin-add {
+  position:absolute;
+  top:8px;
+  right:8px;
+  display:grid;
+  place-items:center;
+  width:31px;
+  height:31px;
+  border-radius:50%;
+  background:#e60023;
+  color:#fff;
+  font:500 24px/1 system-ui,-apple-system,sans-serif;
+  opacity:0;
+  transform:scale(.9);
+  transition:opacity 120ms ease,transform 120ms ease;
+}
+.ls-pin-card:hover .ls-pin-add,
+.ls-pin-layout:hover .ls-pin-add,
+.ls-pin-card:focus-visible .ls-pin-add,
+.ls-pin-layout:focus-visible .ls-pin-add { opacity:1; transform:scale(1); }
+.ls-pin-layout { background:#fff!important; border:1px solid #e8e8e8!important; }
+.ls-pin-layout .ls-layout-miniature {
+  height:auto;
+  min-height:120px;
+  margin:0;
+  border:0;
+  border-radius:0;
+  justify-content:center;
+  padding:14px 8px;
+  background:linear-gradient(145deg,#f5e6df,#efe5d6);
+  gap:10px;
+}
+.ls-pin-layout .ls-layout-miniature i { height:4px; background:#d1b3a3; }
+.ls-pin-layout .ls-layout-miniature i:first-child { height:7px; background:#b84447; }
+.ls-pin-layout .ls-layout-miniature.photo-caption i:first-child { height:49px; width:62%; border:1px solid #c9a98b; background:#fff; }
+.ls-pin-layout .ls-layout-miniature.minimal { background:linear-gradient(145deg,#eeece6,#dce5dc); }
+.ls-pin-layout .ls-layout-miniature.minimal i:first-child { background:#596f60; }
+.ls-pin-layout .ls-layout-miniature.layout-photo { background:linear-gradient(145deg,#e5e0ef,#ede2d5); }
+.ls-pin-layout .ls-layout-miniature.layout-photo i:first-child { background:#85759f; }
+.ls-pin-layout .ls-pin-layout-copy { display:flex; flex-direction:column; gap:4px; padding:10px 11px 12px; }
+.ls-pin-layout .ls-pin-layout-copy strong { font-size:12px; line-height:1.25; }
+.ls-pin-layout .ls-pin-layout-copy>span { color:#737373; font-size:10px; line-height:1.4; }
+@media(max-width:560px) {
+  .ls-editor-panel { border-radius:22px 22px 18px 18px; padding:15px; }
+  .ls-library-grid.ls-pin-grid { column-gap:10px; }
+  .ls-pin-grid .ls-pin-card, .ls-pin-grid .ls-pin-layout { margin-bottom:10px; border-radius:15px; }
+  .ls-pin-art { min-height:92px; }
+  .ls-pin-card[data-pin-look="blush"] .ls-pin-art { min-height:124px; }
+  .ls-pin-card[data-pin-look="rose"] .ls-pin-art,
+  .ls-pin-card[data-pin-look="night"] .ls-pin-art { min-height:132px; }
+  .ls-pin-add { opacity:1; transform:none; width:28px; height:28px; font-size:22px; }
+}
+@media(prefers-reduced-motion:reduce) {
+  .ls-pin-grid .ls-pin-card, .ls-pin-grid .ls-pin-layout, .ls-pin-add { transition:none!important; }
+}
+
+
+/* Paper Stish Smart Edit-style transform handles:
+   large touch targets at every corner, with the layer kept proportional. */
+.ls-selection-frame .ls-resize-handle {
+  position:absolute!important;
+  display:grid!important;
+  place-items:center!important;
+  box-sizing:border-box;
+  width:36px!important;
+  height:36px!important;
+  min-width:36px!important;
+  min-height:36px!important;
+  padding:0!important;
+  border:0!important;
+  border-radius:50%!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  z-index:6;
+  pointer-events:auto!important;
+  touch-action:none;
+  -webkit-tap-highlight-color:transparent;
+}
+.ls-selection-frame .ls-resize-handle::before {
+  content:"";
+  display:block;
+  width:14px;
+  height:14px;
+  box-sizing:border-box;
+  border:1.5px solid #181818;
+  border-radius:50%;
+  background:#fff;
+  box-shadow:0 1px 4px rgba(0,0,0,.25);
+  transition:transform 120ms ease,background-color 120ms ease;
+}
+.ls-selection-frame .ls-resize-handle:active::before {
+  transform:scale(1.18);
+  background:#f2e8e6;
+}
+.ls-selection-frame .ls-resize-nw {
+  left:0!important;top:0!important;right:auto!important;bottom:auto!important;
+  transform:translate(-50%,-50%);cursor:nwse-resize;
+}
+.ls-selection-frame .ls-resize-ne {
+  right:0!important;top:0!important;left:auto!important;bottom:auto!important;
+  transform:translate(50%,-50%);cursor:nesw-resize;
+}
+.ls-selection-frame .ls-resize-sw {
+  left:0!important;bottom:0!important;right:auto!important;top:auto!important;
+  transform:translate(-50%,50%);cursor:nesw-resize;
+}
+.ls-selection-frame .ls-resize-se {
+  right:0!important;bottom:0!important;left:auto!important;top:auto!important;
+  transform:translate(50%,50%);cursor:nwse-resize;
+}
+.ls-selection-frame .ls-resize-handle:focus-visible {
+  outline:2px solid #a92f2b!important;outline-offset:1px;
+}
+@media(prefers-reduced-motion:reduce) {
+  .ls-selection-frame .ls-resize-handle::before { transition:none!important; }
+}

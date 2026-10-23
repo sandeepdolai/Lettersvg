@@ -7,7 +7,7 @@ letterPaper=document.getElementById('letter-paper'), paperShadow=letterPaper&&le
 if(!fs||!surface||!edit||!close||!layer||!page||!letterPaper||!paperShadow)return;
 const originalSurfaceHeight=Number(surface.getAttribute('height'))||690;
 const originalShadowHeight=Number(paperShadow.getAttribute('height'))||originalSurfaceHeight;
-let items=[],selected=null,nextId=1,editing=false,photoEditorMode=false,drawingMode=false,selectedBrush='marker',drawColor='#ed1763',brushSize=24,sizePointerId=null,strokes=[],activeStroke=null,activeStrokePath=null,activePointerId=null,tab='stickers',undoStack=[],redoStack=[],drag=null,cropEdit=null,contentScale=1,canvasWidth=390,canvasHeight=844,layoutGeometry=new Map();
+let items=[],selected=null,nextId=1,editing=false,photoEditorMode=false,drawingMode=false,selectedBrush='marker',drawColor='#ed1763',brushSize=24,sizePointerId=null,strokes=[],strokeUndoStack=[],activeStroke=null,activeStrokePath=null,activePointerId=null,strokeDrag=null,strokeDragFrame=null,pendingStrokePoint=null,tab='stickers',undoStack=[],redoStack=[],drag=null,dragFrame=null,pendingDragPoint=null,cropEdit=null,contentScale=1,canvasWidth=390,canvasHeight=844,layoutGeometry=new Map();
 const ui=document.createElement('section');ui.className='ls-editor-shell';ui.setAttribute('aria-label','Photo editor');
 ui.innerHTML='<div class="ls-editor-topbar" aria-label="Editor controls"><button class="ls-icon-button ls-close-button" data-do="exit" aria-label="Close editor" title="Close editor"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5 19 19M19 5 5 19"/></svg></button><button class="ls-icon-button ls-undo-button" data-do="undo" aria-label="Undo" title="Undo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14 4 9l5-5M4 9h9a6 6 0 0 1 0 12h-2"/></svg></button><span class="ls-topbar-spacer"></span><button class="ls-icon-button ls-more-button" data-do="more" aria-label="More options" aria-expanded="false" title="More options"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg></button><button class="ls-next-button" data-do="next" disabled>Next</button></div><div class="ls-more-menu" aria-label="More options"><button data-do="layers"><span>Layers</span><span class="ls-menu-shortcut">▤</span></button><button data-do="redo"><span>Redo</span><span class="ls-menu-shortcut">↷</span></button><button data-do="library"><span>Library</span><span class="ls-menu-shortcut">✦</span></button><button data-do="layouts"><span>Premade layouts</span><span class="ls-menu-shortcut">▧</span></button></div><div class="ls-editor-panel" aria-live="polite"></div><nav class="ls-editor-dock" aria-label="Editor tools"><button class="ls-tool-button ls-wave-button" data-tool="draw" aria-label="Draw" title="Draw"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M3 23c4-8 7-13 10-13 5 0-4 18-1 18 2 0 9-17 13-17 5 0-4 19-1 19 3 0 7-8 13-15M4 31c4-5 7-7 10-7"/></svg></button><button class="ls-tool-button ls-text-button" data-tool="text" aria-label="Text" title="Text"><span class="ls-letter-a">A</span></button><button class="ls-tool-button ls-plus-button" data-do="quick-add" aria-label="Add to photo" title="Add to photo"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M20 5v30M5 20h30"/></svg></button><button class="ls-tool-button ls-photo-button" data-tool="photo" aria-label="Add photo" title="Add photo"><svg viewBox="0 0 40 40" aria-hidden="true"><rect x="3.5" y="5.5" width="33" height="29" rx="4"/><circle cx="13" cy="14" r="3"/><path d="m5 29 9-8 7 6 5-5 9 9"/></svg></button><button class="ls-tool-button ls-camera-button" data-tool="camera" aria-label="Take a photo" title="Take a photo"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M5 12h7l3-5h10l3 5h7a3 3 0 0 1 3 3v17a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3V15a3 3 0 0 1 3-3Z"/><circle cx="20" cy="23" r="8"/><circle cx="20" cy="23" r="4.5"/></svg></button></nav>';
 document.body.append(ui);
@@ -102,7 +102,7 @@ function reorderLayer(id,direction){
 function duplicateLayer(id){
  const index=items.findIndex(o=>o.id===id);if(index<0)return;
  saveHistory();const copy=clone(items[index]);copy.id=nextId++;copy.visible=true;copy.locked=false;
- copy.x=clamp(Number(copy.x)+.035,0,1-copy.w);copy.y=clamp(Number(copy.y)+.035,0,1-copy.h);
+ copy.x=(Number(copy.x)||0)+.035;copy.y=(Number(copy.y)||0)+.035;
  items.splice(index+1,0,copy);selected=copy.id;draw();
 }
 
@@ -415,22 +415,116 @@ function renderInkLayer(documentHeight){
  inkLayer.setAttribute('overflow','hidden');
  inkLayer.style.overflow='hidden';
 
- // Clip at the actual paper bounds as well as the CSS viewport. This also clips
- // strokes saved by older versions, when points below the paper edge were allowed.
+ // Masks remove ink from earlier strokes. Eraser strokes are instructions for
+ // the masks, not visible white paths and not new artwork layers.
+ const defs=document.createElementNS(svgNS,'defs');
  const clip=document.createElementNS(svgNS,'clipPath');
  clip.setAttribute('id','lettersvg-ink-paper-clip');
  clip.setAttribute('clipPathUnits','userSpaceOnUse');
  const rect=document.createElementNS(svgNS,'rect');
  rect.setAttribute('x','0');rect.setAttribute('y','0');
  rect.setAttribute('width',String(inkWidth));rect.setAttribute('height',String(inkHeight));
- clip.append(rect);inkLayer.append(clip);
+ clip.append(rect);
+ defs.append(clip);
 
  const clippedInk=document.createElementNS(svgNS,'g');
+ clippedInk.setAttribute('class','ls-visible-ink');
  clippedInk.setAttribute('clip-path','url(#lettersvg-ink-paper-clip)');
- strokes.forEach(stroke=>clippedInk.append(makeInkPath(stroke)));
- inkLayer.append(clippedInk);
- Object.assign(inkLayer.style,{pointerEvents:drawingMode?'auto':'none',touchAction:'none'});
+ const moveTargets=document.createElementNS(svgNS,'g');
+ moveTargets.setAttribute('class','ls-ink-move-targets');
+ moveTargets.setAttribute('clip-path','url(#lettersvg-ink-paper-clip)');
+
+ strokes.forEach((stroke,index)=>{
+  // Eraser paths only mask strokes that were drawn before them. Later drawing
+  // remains visible, matching the normal behavior of a paint-app eraser.
+  if(stroke.brush==='eraser')return;
+  const path=makeInkPath(stroke);
+  path.style.pointerEvents='none';
+  const laterErasers=strokes.slice(index+1).filter(candidate=>candidate.brush==='eraser');
+  if(laterErasers.length){
+   const mask=document.createElementNS(svgNS,'mask');
+   const maskId='lettersvg-ink-erase-mask-'+index;
+   mask.setAttribute('id',maskId);
+   mask.setAttribute('maskUnits','userSpaceOnUse');
+   mask.setAttribute('maskContentUnits','userSpaceOnUse');
+   mask.setAttribute('mask-type','luminance');
+   mask.style.maskType='luminance';
+   mask.setAttribute('x','0');mask.setAttribute('y','0');
+   mask.setAttribute('width',String(inkWidth));mask.setAttribute('height',String(inkHeight));
+   const visible=document.createElementNS(svgNS,'rect');
+   visible.setAttribute('x','0');visible.setAttribute('y','0');
+   visible.setAttribute('width',String(inkWidth));visible.setAttribute('height',String(inkHeight));
+   visible.setAttribute('fill','#fff');
+   mask.append(visible);
+   laterErasers.forEach(eraser=>{
+    const erasePath=makeInkPath(eraser);
+    erasePath.setAttribute('stroke','#000');
+    erasePath.removeAttribute('mask');
+    mask.append(erasePath);
+   });
+   defs.append(mask);
+   path.setAttribute('mask','url(#'+maskId+')');
+  }
+  clippedInk.append(path);
+  if(editing&&!drawingMode){
+   // The invisible hit path lets users grab an existing stroke to move it,
+   // without turning the entire SVG overlay into a pointer-blocking surface.
+   const hitPath=makeInkPath(stroke);
+   hitPath.setAttribute('class','ls-ink-move-target');
+   hitPath.setAttribute('data-stroke-index',String(index));
+   hitPath.setAttribute('stroke','transparent');
+   hitPath.setAttribute('stroke-width',String(Math.max(18,(Number(stroke.width)||0)+14)));
+   hitPath.setAttribute('pointer-events','stroke');
+   hitPath.style.pointerEvents='stroke';
+   hitPath.style.cursor='grab';
+   hitPath.style.touchAction='none';
+   moveTargets.append(hitPath);
+  }
+ });
+ inkLayer.append(defs,clippedInk,moveTargets);
+ Object.assign(inkLayer.style,{pointerEvents:(drawingMode||editing)?'auto':'none',touchAction:'none'});
  page.append(inkLayer);updateDrawingControls();
+}
+function startStrokeMove(e){
+ if(!editing||drawingMode||(e.button!==0&&e.pointerType==='mouse'))return;
+ const target=e.target&&e.target.closest?e.target.closest('[data-stroke-index]'):null;
+ if(!target)return;
+ const index=Number(target.getAttribute('data-stroke-index')),stroke=strokes[index];
+ if(!stroke||stroke.brush==='eraser'||!stroke.points||!stroke.points.length)return;
+ e.preventDefault();e.stopPropagation();
+ const rect=inkLayer.getBoundingClientRect();if(!rect.width||!rect.height)return;
+ if(strokeDragFrame!==null){cancelAnimationFrame(strokeDragFrame);strokeDragFrame=null;}
+ pendingStrokePoint=null;
+ strokeDrag={index,pointerId:e.pointerId,sx:e.clientX,sy:e.clientY,rw:rect.width,rh:rect.height,points:clone(stroke.points)};
+ try{inkLayer.setPointerCapture(e.pointerId);}catch(_){}
+}
+function applyStrokeMoveFrame(){
+ if(!strokeDrag||!pendingStrokePoint)return;
+ const d=strokeDrag,p=pendingStrokePoint;pendingStrokePoint=null;
+ const dx=p.x-d.sx,dy=p.y-d.sy;
+ if(dx*dx+dy*dy<1)return;
+ const stroke=strokes[d.index];if(!stroke)return;
+ stroke.points=d.points.map(point=>({x:point.x+dx/d.rw,y:point.y+dy/d.rh}));
+ renderInkLayer(Math.max(1,parseFloat(page.style.height)||canvasHeight));
+}
+function scheduleStrokeMove(e){
+ if(!strokeDrag||e.pointerId!==strokeDrag.pointerId)return;
+ e.preventDefault();pendingStrokePoint={x:e.clientX,y:e.clientY};
+ if(strokeDragFrame===null){
+  strokeDragFrame=requestAnimationFrame(()=>{strokeDragFrame=null;applyStrokeMoveFrame();});
+ }
+}
+function finishStrokeMove(e){
+ if(!strokeDrag||(e&&e.pointerId!==strokeDrag.pointerId))return;
+ if(e&&Number.isFinite(e.clientX)&&Number.isFinite(e.clientY))pendingStrokePoint={x:e.clientX,y:e.clientY};
+ if(strokeDragFrame!==null){cancelAnimationFrame(strokeDragFrame);strokeDragFrame=null;}
+ if(pendingStrokePoint)applyStrokeMoveFrame();
+ const d=strokeDrag,stroke=strokes[d.index];
+ const changed=stroke&&stroke.points.some((point,i)=>Math.abs(point.x-d.points[i].x)>0.00001||Math.abs(point.y-d.points[i].y)>0.00001);
+ if(changed)strokeUndoStack.push({type:'move',index:d.index,points:d.points});
+ strokeDrag=null;pendingStrokePoint=null;
+ try{inkLayer.releasePointerCapture(d.pointerId);}catch(_){}
+ updateDrawingControls();
 }
 function inkPointFromEvent(e){
  const rect=inkLayer.getBoundingClientRect(),docHeight=Math.max(1,parseFloat(page.style.height)||canvasHeight),sx=canvasWidth/Math.max(1,rect.width),sy=docHeight/Math.max(1,rect.height);
@@ -438,13 +532,35 @@ function inkPointFromEvent(e){
 }
 function startInk(e){
  if(!drawingMode||(e.button!==0&&e.pointerType==='mouse'))return;e.preventDefault();e.stopPropagation();
- const p=inkPointFromEvent(e),erasing=selectedBrush==='eraser';activeStroke={color:erasing?'#f7f7f7':drawColor,width:Math.round((brushWidths[selectedBrush]||4)*(brushSize/24)*10)/10,brush:selectedBrush,brushSize,points:[p]};strokes.push(activeStroke);activeStrokePath=makeInkPath(activeStroke);inkLayer.append(activeStrokePath);activePointerId=e.pointerId;try{inkLayer.setPointerCapture(e.pointerId);}catch(_){}updateDrawingControls();
+ const p=inkPointFromEvent(e);
+ activeStroke={color:drawColor,width:Math.round((brushWidths[selectedBrush]||4)*(brushSize/24)*10)/10,brush:selectedBrush,brushSize,points:[p]};
+ strokes.push(activeStroke);
+ strokeUndoStack.push({type:'add',index:strokes.length-1});
+ activePointerId=e.pointerId;
+ renderInkLayer(Math.max(1,parseFloat(page.style.height)||canvasHeight));
+ try{inkLayer.setPointerCapture(e.pointerId);}catch(_){}
 }
 function moveInk(e){
- if(!drawingMode||!activeStroke||e.pointerId!==activePointerId)return;e.preventDefault();const p=inkPointFromEvent(e),last=activeStroke.points[activeStroke.points.length-1],dx=p.x-last.x,dy=p.y-last.y;if(dx*dx+dy*dy<0.000002)return;activeStroke.points.push(p);activeStrokePath.setAttribute('d',strokePathData(activeStroke));
+ if(!drawingMode||!activeStroke||e.pointerId!==activePointerId)return;e.preventDefault();
+ const p=inkPointFromEvent(e),last=activeStroke.points[activeStroke.points.length-1],dx=p.x-last.x,dy=p.y-last.y;
+ if(dx*dx+dy*dy<0.000002)return;
+ activeStroke.points.push(p);
+ // Rebuild the SVG masks while a stroke is in progress so the eraser effect
+ // is visible immediately, rather than drawing an opaque stroke on top.
+ renderInkLayer(Math.max(1,parseFloat(page.style.height)||canvasHeight));
 }
 function finishInk(e){if(!activeStroke||(e&&e.pointerId!==activePointerId))return;activeStroke=null;activeStrokePath=null;activePointerId=null;updateDrawingControls();}
-function undoInk(){if(!strokes.length)return;strokes.pop();activeStroke=null;activeStrokePath=null;activePointerId=null;draw();}
+function undoInk(){
+ if(!strokeUndoStack.length){if(!strokes.length)return;strokes.pop();}
+ else{
+  const action=strokeUndoStack.pop();
+  if(action.type==='move'){
+   const stroke=strokes[action.index];if(stroke)stroke.points=clone(action.points);
+  }else if(action.type==='add')strokes.splice(action.index,1);
+ }
+ activeStroke=null;activeStrokePath=null;activePointerId=null;strokeDrag=null;pendingStrokePoint=null;
+ draw();
+}
 function chooseInkColor(){
  const colors=[
   ['#ed1763','Pink'],['#ff2638','Red'],['#ff6b18','Orange'],['#ffd000','Yellow'],
@@ -559,17 +675,12 @@ function positionLayer(){
  draw();
 }
 function clampLayerModel(o){
- const rad=(Number(o.rotation)||0)*Math.PI/180;
- let w=Math.max(.025,Number(o.w)||.1),h=Math.max(.025,Number(o.h)||.1);
- const c=Math.abs(Math.cos(rad)),sn=Math.abs(Math.sin(rad));
- const rotatedW=()=>w*canvasWidth*c+h*canvasHeight*sn;
- const rotatedH=()=>w*canvasWidth*sn+h*canvasHeight*c;
- const fit=Math.min(1,canvasWidth/Math.max(1,rotatedW()),canvasHeight/Math.max(1,rotatedH()));
- if(fit<1){w*=fit;h*=fit;o.w=w;o.h=h;}
- const rx=rotatedW()/Math.max(1,canvasWidth),ry=rotatedH()/Math.max(1,canvasHeight);
- const cx=clamp((Number(o.x)||0)+w/2,rx/2,1-rx/2);
- const cy=clamp((Number(o.y)||0)+h/2,ry/2,1-ry/2);
- o.x=cx-w/2;o.y=cy-h/2;
+ // Keep layer coordinates free to cross the paper bounds. Rendering is clipped by
+ // the fixed canvas viewport, so negative and greater-than-one positions are valid.
+ o.w=Math.max(.025,Number(o.w)||.1);
+ o.h=Math.max(.025,Number(o.h)||.1);
+ o.x=Number.isFinite(Number(o.x))?Number(o.x):0;
+ o.y=Number.isFinite(Number(o.y))?Number(o.y):0;
 }
 function actionButton(op,label,title,o){
  const b=document.createElement('button');b.type='button';b.className='ls-object-action';b.dataset.op=op;b.textContent=label;b.title=title;b.setAttribute('aria-label',title);
@@ -589,6 +700,8 @@ function startDrag(e,o,mode){
  e.preventDefault();e.stopPropagation();
  if(o.locked){selected=o.id;draw();return;}
  const r=layer.getBoundingClientRect();if(!r.width||!r.height)return;
+ if(dragFrame!==null){cancelAnimationFrame(dragFrame);dragFrame=null;}
+ pendingDragPoint=null;
  saveHistory();selected=o.id;
  const g=layoutGeometry.get(o.id)||o;
  const cx=r.left+(g.x+g.w/2)*r.width,cy=r.top+(g.y+g.h/2)*r.height;
@@ -598,33 +711,51 @@ function startDrag(e,o,mode){
  try{layer.setPointerCapture(e.pointerId);}catch(_){}
  draw();
 }
-document.addEventListener('pointermove',e=>{
- if(!drag||e.pointerId!==drag.pointerId)return;
- const o=items.find(x=>x.id===drag.id);if(!o)return;
- const dx=e.clientX-drag.sx,dy=e.clientY-drag.sy;
- if(drag.mode==='move'){
-  o.x=drag.x+dx/drag.rw;o.y=drag.y+dy/drag.rh;
- }else if(drag.mode==='rotate'){
-  const angle=Math.atan2(e.clientY-drag.centerY,e.clientX-drag.centerX);
-  o.rotation=((drag.startRotation+(angle-drag.startAngle)*180/Math.PI)%360+360)%360;
- }else if(drag.mode==='resize'){
-  const distance=Math.hypot(e.clientX-drag.centerX,e.clientY-drag.centerY);
-  const scale=clamp(distance/drag.startDistance,.05,8);
-  o.x=drag.x+drag.w/2-(drag.w*scale)/2;
-  o.y=drag.y+drag.h/2-(drag.h*scale)/2;
-  o.w=Math.max(.035,drag.w*scale);o.h=Math.max(.025,drag.h*scale);
-  if(o.type==='text')o.size=clamp((Number(drag.original.size)||30)*scale,8,160);
+function applyLayerDragFrame(){
+ if(!drag||!pendingDragPoint)return;
+ const d=drag,p=pendingDragPoint;pendingDragPoint=null;
+ const o=items.find(x=>x.id===d.id);if(!o)return;
+ const dx=p.x-d.sx,dy=p.y-d.sy;
+ if(d.mode==='move'){
+  o.x=d.x+dx/d.rw;o.y=d.y+dy/d.rh;
+ }else if(d.mode==='rotate'){
+  const angle=Math.atan2(p.y-d.centerY,p.x-d.centerX);
+  o.rotation=((d.startRotation+(angle-d.startAngle)*180/Math.PI)%360+360)%360;
+ }else if(d.mode==='resize'){
+  // Proportional resizing around the layer centre, measured in screen pixels
+  // so mouse, pen and touch input follow the same transform math.
+  const distance=Math.hypot(p.x-d.centerX,p.y-d.centerY);
+  const scale=clamp(distance/d.startDistance,.05,8);
+  o.x=d.x+d.w/2-(d.w*scale)/2;
+  o.y=d.y+d.h/2-(d.h*scale)/2;
+  o.w=Math.max(.035,d.w*scale);o.h=Math.max(.025,d.h*scale);
+  if(o.type==='text')o.size=clamp((Number(d.original.size)||30)*scale,8,160);
  }
  clampLayerModel(o);draw();
-});
+}
+function scheduleLayerDrag(e){
+ if(!drag||e.pointerId!==drag.pointerId)return;
+ e.preventDefault();
+ pendingDragPoint={x:e.clientX,y:e.clientY};
+ if(dragFrame===null){
+  dragFrame=requestAnimationFrame(()=>{
+   dragFrame=null;
+   applyLayerDragFrame();
+  });
+ }
+}
+document.addEventListener('pointermove',scheduleLayerDrag,{passive:false});
 function finishLayerDrag(e){
  if(!drag||(e&&e.pointerId!==drag.pointerId))return;
- const d=drag,o=items.find(x=>x.id===d.id);drag=null;
+ if(e&&Number.isFinite(e.clientX)&&Number.isFinite(e.clientY))pendingDragPoint={x:e.clientX,y:e.clientY};
+ if(dragFrame!==null){cancelAnimationFrame(dragFrame);dragFrame=null;}
+ if(pendingDragPoint)applyLayerDragFrame();
+ const d=drag,o=items.find(x=>x.id===d.id);drag=null;pendingDragPoint=null;
  try{layer.releasePointerCapture(d.pointerId);}catch(_){}
  if(!o||(['x','y','w','h','rotation','size'].every(k=>Number(o[k]||0)===Number(d.original[k]||0)))){undoStack.pop();histButtons();}
 }
-document.addEventListener('pointerup',finishLayerDrag);document.addEventListener('pointercancel',finishLayerDrag);
-
+document.addEventListener('pointerup',finishLayerDrag);
+document.addEventListener('pointercancel',finishLayerDrag);
 function measureTextHeight(o,widthPx){
   const fontPx=Math.max(10,o.size*contentScale);
   const availableWidth=Math.max(24,widthPx-8);
@@ -659,23 +790,16 @@ function measureTextHeight(o,widthPx){
   const layout=new Map();
   items.forEach(o=>{
    const g={x:Number(o.x)||0,y:Number(o.y)||0,w:Number(o.w)||.1,h:Number(o.h)||.1};
-   g.w=clamp(g.w,.025,1);
+   g.w=Math.max(.025,g.w);
    if(o.type==='text')g.h=measureTextHeight(o,g.w*canvasWidth)/Math.max(1,canvasHeight);
    else if(o.type==='image'){
     const natural=safeNatural(o),aspect=o.crop?cropAspect(o.crop,natural):(Number(o.ratio)||natural.width/natural.height);
     g.h=(g.w*canvasWidth/Math.max(.001,aspect))/Math.max(1,canvasHeight);
-   }else g.h=clamp(g.h,.015,1);
+   }else g.h=Math.max(.015,g.h);
 
-   g.h=clamp(g.h,.015,1);
-   const angle=(Number(o.rotation)||0)*Math.PI/180,ca=Math.abs(Math.cos(angle)),sa=Math.abs(Math.sin(angle));
-   const rotatedW=()=>g.w*canvasWidth*ca+g.h*canvasHeight*sa;
-   const rotatedH=()=>g.w*canvasWidth*sa+g.h*canvasHeight*ca;
-   const fit=Math.min(1,canvasWidth/Math.max(1,rotatedW()),canvasHeight/Math.max(1,rotatedH()));
-   if(fit<1){g.w*=fit;g.h*=fit;}
-   const boundW=rotatedW()/Math.max(1,canvasWidth),boundH=rotatedH()/Math.max(1,canvasHeight);
-   const cx=clamp(g.x+g.w/2,boundW/2,1-boundW/2);
-   const cy=clamp(g.y+g.h/2,boundH/2,1-boundH/2);
-   g.x=cx-g.w/2;g.y=cy-g.h/2;
+   g.h=Math.max(.015,g.h);
+   // Do not pull or shrink artwork back into the paper. The page's paint clip
+   // hides all pixels outside the canvas while preserving the real layer geometry.
    layout.set(o.id,g);
   });
   return layout;
@@ -697,8 +821,20 @@ function measureTextHeight(o,widthPx){
   const rotate=document.createElement('button');rotate.type='button';rotate.className='ls-rotate-handle';rotate.setAttribute('aria-label','Rotate selected layer by dragging');rotate.title='Drag to rotate';
   rotate.addEventListener('pointerdown',e=>startDrag(e,o,'rotate'));rotate.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();});
   frame.append(rotate);
-  const grip=document.createElement('button');grip.type='button';grip.className='ls-resize-handle';grip.setAttribute('aria-label','Resize selected layer');grip.addEventListener('pointerdown',e=>startDrag(e,o,'resize'));grip.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();});
-  frame.append(grip);page.append(frame);
+  [
+   ['nw','top left'],['ne','top right'],['sw','bottom left'],['se','bottom right']
+  ].forEach(([corner,label])=>{
+   const grip=document.createElement('button');
+   grip.type='button';
+   grip.className='ls-resize-handle ls-resize-'+corner;
+   grip.dataset.resizeCorner=corner;
+   grip.setAttribute('aria-label','Resize selected layer from '+label);
+   grip.title='Resize';
+   grip.addEventListener('pointerdown',e=>startDrag(e,o,'resize'));
+   grip.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();});
+   frame.append(grip);
+  });
+  page.append(frame);
  }
  function draw(){
   layoutGeometry=photoCompositionLayout();
@@ -740,7 +876,10 @@ function measureTextHeight(o,widthPx){
   syncPaperSurfaceHeight();histButtons();
  }
 
-inkLayer.addEventListener('pointerdown',startInk);
+inkLayer.addEventListener('pointerdown',e=>{if(drawingMode)startInk(e);else startStrokeMove(e);});
+document.addEventListener('pointermove',scheduleStrokeMove,{passive:false});
+document.addEventListener('pointerup',finishStrokeMove);
+document.addEventListener('pointercancel',finishStrokeMove);
 const brushSizeControl=ui.querySelector('.ls-brush-size-control');
 if(brushSizeControl){
  brushSizeControl.addEventListener('pointerdown',startBrushSizeChange);
@@ -751,7 +890,7 @@ document.addEventListener('pointermove',moveBrushSizeChange,{passive:false});
 document.addEventListener('pointerup',finishInk);document.addEventListener('pointercancel',finishInk);
 document.addEventListener('pointerup',finishBrushSizeChange);document.addEventListener('pointercancel',finishBrushSizeChange);
 page.addEventListener('pointerdown',e=>{if(e.target===page&&editing){selected=null;draw();}});
-function openEditor(){if(!document.body.classList.contains('is-paper-fullscreen'))return;editing=true;photoEditorMode=true;document.body.classList.add('is-paper-editor-active');ui.classList.add('is-active');layer.style.overflowY='hidden';layer.style.overscrollBehavior='none';layer.style.touchAction='none';layer.scrollTop=0;edit.classList.remove('is-visible');const old=document.getElementById('paper-fullscreen-text');if(old)old.classList.remove('is-visible');positionLayer();draw();}
+function openEditor(){if(!document.body.classList.contains('is-paper-fullscreen'))return;editing=true;photoEditorMode=true;document.body.classList.add('is-paper-editor-active');ui.classList.add('is-active');layer.style.overflowY='hidden';layer.style.overscrollBehavior='none';layer.style.touchAction='none';layer.scrollTop=0;edit.classList.remove('is-visible');positionLayer();draw();}
 function done(){editing=false;panel.classList.remove('is-open');ui.classList.remove('is-active');document.body.classList.remove('is-paper-editor-active');setMoreMenu(false);edit.classList.add('is-visible');layer.style.pointerEvents=photoEditorMode?'auto':'none';draw();}
 function setMoreMenu(open){const menu=ui.querySelector('.ls-more-menu'),button=ui.querySelector('.ls-more-button');if(menu)menu.classList.toggle('is-open',!!open);if(button)button.setAttribute('aria-expanded',open?'true':'false');}
 function showPanel(){setMoreMenu(false);panel.classList.add('is-open');}
@@ -806,14 +945,40 @@ file.addEventListener('change',()=>{
  });
 });
 function libraryPanel(which){
- tab=which||tab;ui.querySelectorAll('[data-tool]').forEach(b=>b.classList.toggle('is-active',b.dataset.tool==='library'));
- let html='<div class="ls-panel-header"><div><h3>Library</h3><p>Little details to finish your letter</p></div><button class="ls-panel-close" data-do="close-panel" aria-label="Close panel">×</button></div><div class="ls-library-tabs">';
- [['stickers','Stickers'],['elements','Elements'],['layouts','Layouts']].forEach(t=>html+='<button data-lib-tab="'+t[0]+'" class="'+(tab===t[0]?'is-active':'')+'">'+t[1]+'</button>');
- html+='</div><div class="ls-library-grid">';
- if(tab==='stickers')[['heart','♥','Heart'],['sparkle','✦','Sparkle'],['flower','✿','Flower'],['star','★','Star'],['outline-heart','♡','Outline heart'],['smile','☺','Smiley'],['moon','☾','Moon'],['music','♫','Music'],['infinity','∞','Infinity'],['flower-two','❀','Blossom']].forEach(e=>html+='<button class="ls-library-tile" data-lib-add="'+e[0]+'"><span class="ls-library-symbol">'+e[1]+'</span><span>'+e[2]+'</span></button>');
- else if(tab==='elements')[['frame','▢','Frame'],['circle','◯','Circle'],['line','―','Line'],['dot','●','Dot'],['corner','⌜','Corner'],['ribbon','〰','Wave'],['diamond','◇','Diamond'],['leaf','❧','Leaf']].forEach(e=>html+='<button class="ls-library-tile" data-lib-add="'+e[0]+'"><span class="ls-library-symbol">'+e[1]+'</span><span>'+e[2]+'</span></button>');
- else [['love-note','Love note','A warm message with a signature'],['photo-caption','Photo & caption','A picture frame and a short message'],['minimal','Minimal note','A heading with quiet text']].forEach(e=>html+='<button class="ls-layout-tile" data-lib-add="'+e[0]+'"><span class="ls-layout-miniature '+e[0]+'"><i></i><i></i><i></i></span><strong>'+e[1]+'</strong><span>'+e[2]+'</span></button>');
- panel.innerHTML=html+'</div>';showPanel();
+ tab=which||tab;
+ ui.querySelectorAll('[data-tool]').forEach(b=>b.classList.toggle('is-active',b.dataset.tool==='library'));
+ let html='<div class="ls-panel-header"><div><h3>Explore ideas</h3><p>Choose a detail to add to your letter</p></div><button class="ls-panel-close" data-do="close-panel" aria-label="Close panel">×</button></div><div class="ls-library-tabs" role="tablist" aria-label="Explore assets">';
+ [['stickers','Stickers'],['elements','Elements'],['layouts','Layouts']].forEach(t=>{
+  html+='<button type="button" role="tab" aria-selected="'+(tab===t[0]?'true':'false')+'" data-lib-tab="'+t[0]+'" class="'+(tab===t[0]?'is-active':'')+'">'+t[1]+'</button>';
+ });
+ html+='</div><div class="ls-library-grid ls-pin-grid" data-library-kind="'+tab+'">';
+ const addCard=(key,symbol,label,look,kind)=> {
+  html+='<button type="button" class="ls-library-tile ls-pin-card" data-lib-add="'+key+'" data-pin-look="'+look+'" aria-label="Add '+label+(kind==='elements'?' element':' sticker')+'"><span class="ls-pin-art" aria-hidden="true"><span class="ls-library-symbol">'+symbol+'</span></span><span class="ls-pin-title">'+label+'</span><span class="ls-pin-add" aria-hidden="true">+</span></button>';
+ };
+ if(tab==='stickers'){
+  [
+   ['heart','♥','Heart','blush'],['sparkle','✦','Sparkle','butter'],['flower','✿','Flower','rose'],
+   ['star','★','Star','cream'],['outline-heart','♡','Outline heart','lilac'],
+   ['smile','☺','Smiley','mint'],['moon','☾','Moon','night'],
+   ['music','♫','Music','sage'],['infinity','∞','Infinity','peach'],['flower-two','❀','Blossom','sky']
+  ].forEach(e=>addCard(e[0],e[1],e[2],e[3],'stickers'));
+ } else if(tab==='elements'){
+  [
+   ['frame','▢','Frame','cream'],['circle','◯','Circle','lilac'],['line','―','Line','sage'],
+   ['dot','●','Dot','blush'],['corner','⌜','Corner','sky'],['ribbon','〰','Wave','rose'],
+   ['diamond','◇','Diamond','butter'],['leaf','❧','Leaf','mint']
+  ].forEach(e=>addCard(e[0],e[1],e[2],e[3],'elements'));
+ } else {
+  [
+   ['love-note','Love note','A warm message with a signature','layout-love'],
+   ['photo-caption','Photo & caption','A frame with an editorial caption','layout-photo'],
+   ['minimal','Minimal note','A heading with quiet supporting text','layout-minimal']
+  ].forEach(e=>{
+   html+='<button type="button" class="ls-layout-tile ls-pin-layout" data-lib-add="'+e[0]+'" aria-label="Add '+e[1]+' layout"><span class="ls-layout-miniature '+e[0]+' '+e[3]+'" aria-hidden="true"><i></i><i></i><i></i></span><span class="ls-pin-layout-copy"><strong>'+e[1]+'</strong><span>'+e[2]+'</span></span><span class="ls-pin-add" aria-hidden="true">+</span></button>';
+  });
+ }
+ panel.innerHTML=html+'</div>';
+ showPanel();
 }
 function libraryAdd(name){
  if(['love-note','photo-caption','minimal'].includes(name)){
@@ -897,6 +1062,7 @@ ui.addEventListener('click',e=>{
  const t=e.target.closest('[data-lib-tab]');if(t){libraryPanel(t.dataset.libTab);return;}
  const item=e.target.closest('[data-lib-add]');if(item)libraryAdd(item.dataset.libAdd);
 });
+
 
 edit.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();openEditor();},true);
 close.addEventListener('click',()=>{editing=false;photoEditorMode=false;drawingMode=false;document.body.classList.remove('is-paper-editor-active','is-paper-drawing-mode');ui.classList.remove('is-active','is-drawing-mode');panel.classList.remove('is-open');setMoreMenu(false);layer.style.overflowY='hidden';layer.style.overscrollBehavior='none';layer.style.touchAction='none';layer.style.pointerEvents='none';draw();},true);
