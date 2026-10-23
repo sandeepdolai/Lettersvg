@@ -149,6 +149,9 @@ function chooseInkColor(){
  panel.innerHTML='<div class="ls-draw-color-grid" role="group" aria-label="Ink colors">'+colors.map(c=>'<button type="button" data-draw-color="'+c[0]+'" aria-label="'+c[1]+'" title="'+c[1]+'" style="--swatch:'+c[0]+'" class="'+(drawColor.toLowerCase()===c[0]?'is-picked':'')+'"></button>').join('')+'</div>';
  panel.classList.add('is-color-palette');
  ui.classList.add('is-color-palette-open');
+ // The color tray replaces the drawing controls and is pinned flush inside the
+ // paper's lower edge; don't inherit the generic centered-panel transform.
+ syncEditorChromeToCanvas();
  showPanel();
 }
 function enterDrawingMode(){
