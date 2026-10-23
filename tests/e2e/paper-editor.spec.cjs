@@ -197,6 +197,57 @@ test("Move and resize match Smart Edit corner-handle behavior", async ({ page })
   await expect(page.locator("#paper-page-viewport")).toBeVisible();
 });
 
+test("layers may extend beyond the canvas but stay clipped to paper bounds", async ({ page }) => {
+  await openRealPaper(page);
+  await openEditor(page);
+  await page.locator('[data-tool="text"]').click();
+  await page.locator(".ls-text-input").fill("Clipped at the paper edge");
+  await page.locator('[data-do="apply-text"]').click();
+
+  const viewport = page.locator("#paper-page-viewport");
+  const object = page.locator(".ls-object-text").first();
+  const canvas = await viewport.boundingBox();
+  const before = await object.boundingBox();
+  expect(canvas).not.toBeNull();
+  expect(before).not.toBeNull();
+
+  // Move the text partly beyond the top edge without changing its layer size.
+  const startX = before.x + Math.min(16, before.width / 3);
+  const startY = before.y + before.height / 2;
+  const targetTop = canvas.y - before.height * 0.45;
+  const deltaY = targetTop - before.y;
+  await page.mouse.move(startX, startY);
+  await page.mouse.down();
+  await page.mouse.move(startX, startY + deltaY, { steps: 8 });
+  await page.mouse.up();
+
+  const after = await object.boundingBox();
+  expect(after).not.toBeNull();
+  expect(after.y).toBeLessThan(canvas.y);
+  expect(after.y + after.height).toBeGreaterThan(canvas.y);
+
+  const clipping = await page.locator("#paper-page-content").evaluate(el => {
+    const style = getComputedStyle(el);
+    return { overflow: style.overflow, clipPath: style.clipPath, contain: style.contain };
+  });
+  expect(clipping.overflow).toBe("hidden");
+  expect(clipping.clipPath).toContain("inset");
+  expect(clipping.contain).toContain("paint");
+  await expect(viewport).toHaveCSS("overflow", "hidden");
+
+  const hitTest = await page.evaluate(({ x, y, insideY }) => ({
+    outside: Boolean(document.elementFromPoint(x, y)?.closest(".ls-object")),
+    inside: Boolean(document.elementFromPoint(x, insideY)?.closest(".ls-object"))
+  }), {
+    x: after.x + 10,
+    y: canvas.y - 2,
+    insideY: canvas.y + 2
+  });
+  expect(hitTest.outside).toBe(false);
+  expect(hitTest.inside).toBe(true);
+  await expect(page.locator("#letter-paper")).toHaveCount(1);
+});
+
 test("Eraser removes existing ink instead of drawing a white layer", async ({ page }) => {
   await openRealPaper(page);
   await openEditor(page);
