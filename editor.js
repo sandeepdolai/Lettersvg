@@ -96,6 +96,222 @@ function duplicateLayer(id){
  items.splice(index+1,0,copy);selected=copy.id;draw();
 }
 
+
+const CROP_PRESETS=[
+ {id:'original',label:'Original',ratio:'original'},
+ {id:'free',label:'Free',ratio:null},
+ {id:'1:1',label:'1:1',ratio:1},
+ {id:'4:5',label:'4:5',ratio:4/5},
+ {id:'3:4',label:'3:4',ratio:3/4},
+ {id:'3:2',label:'3:2',ratio:3/2},
+ {id:'16:9',label:'16:9',ratio:16/9},
+ {id:'9:16',label:'9:16',ratio:9/16}
+];
+function snapshotCrop(){
+ if(!cropEdit)return;
+ cropEdit.past.push({draft:clone(cropEdit.draft),preset:cropEdit.preset});
+ if(cropEdit.past.length>50)cropEdit.past.shift();
+ cropEdit.future=[];updateCropHistoryButtons();
+}
+function updateCropHistoryButtons(){
+ if(!cropEdit)return;
+ const undo=cropOverlay.querySelector('[data-crop-action="undo"]');
+ const redo=cropOverlay.querySelector('[data-crop-action="redo"]');
+ if(undo)undo.disabled=cropEdit.past.length===0;
+ if(redo)redo.disabled=cropEdit.future.length===0;
+}
+function cropPlaneAspect(){
+ if(!cropEdit)return 1;
+ const o=items.find(item=>item.id===cropEdit.id);if(!o)return 1;
+ const dims=rotatedImageDims(safeNatural(o),cropEdit.draft.rotation);
+ return dims.width/Math.max(1,dims.height);
+}
+function updateCropFrame(){
+ if(!cropEdit)return;
+ const frame=cropOverlay.querySelector('.ls-crop-frame');
+ if(!frame)return;
+ const c=cropEdit.draft;
+ Object.assign(frame.style,{left:(c.x*100)+'%',top:(c.y*100)+'%',width:(c.width*100)+'%',height:(c.height*100)+'%'});
+ cropOverlay.querySelectorAll('[data-crop-ratio]').forEach(b=>b.classList.toggle('is-active',b.dataset.cropRatio===cropEdit.preset));
+ updateCropHistoryButtons();
+}
+function layoutCropEditor(){
+ if(!cropEdit)return;
+ const o=items.find(item=>item.id===cropEdit.id);if(!o)return;
+ const workspace=cropOverlay.querySelector('.ls-crop-workspace');
+ const plane=cropOverlay.querySelector('.ls-crop-photo-plane');
+ const img=cropOverlay.querySelector('.ls-crop-source');
+ if(!workspace||!plane||!img)return;
+ const natural=safeNatural(o),dims=rotatedImageDims(natural,cropEdit.draft.rotation);
+ const availableWidth=Math.max(1,workspace.clientWidth-8),availableHeight=Math.max(1,workspace.clientHeight-8);
+ const scale=Math.min(availableWidth/dims.width,availableHeight/dims.height);
+ const width=Math.max(1,dims.width*scale),height=Math.max(1,dims.height*scale);
+ cropEdit.planeWidth=width;cropEdit.planeHeight=height;
+ Object.assign(plane.style,{width:width+'px',height:height+'px'});
+ const swap=Math.abs(Math.sin(cropEdit.draft.rotation*Math.PI/180))>Math.abs(Math.cos(cropEdit.draft.rotation*Math.PI/180));
+ Object.assign(img.style,{
+  position:'absolute',left:'50%',top:'50%',
+  width:(swap?height:width)+'px',height:(swap?width:height)+'px',
+  maxWidth:'none',maxHeight:'none',objectFit:'fill',
+  transform:'translate(-50%,-50%) rotate('+cropEdit.draft.rotation+'deg)',
+  transformOrigin:'center center'
+ });
+ updateCropFrame();
+}
+function renderCropEditor(){
+ if(!cropEdit)return;
+ const o=items.find(item=>item.id===cropEdit.id);if(!o)return;
+ ui.classList.add('is-crop-mode');
+ const ratios=CROP_PRESETS.map(p=>'<button type="button" data-crop-ratio="'+p.id+'" class="'+(cropEdit.preset===p.id?'is-active':'')+'">'+p.label+'</button>').join('');
+ cropOverlay.innerHTML=
+  '<header class="ls-crop-topbar"><button type="button" data-crop-action="cancel">Cancel</button><strong>Crop photo</strong><button type="button" data-crop-action="reset">Reset</button></header>'+
+  '<div class="ls-crop-workspace" aria-label="Photo crop workspace"><div class="ls-crop-photo-plane">'+
+   '<img class="ls-crop-source" alt="Photo being cropped" draggable="false">'+
+   '<div class="ls-crop-frame" role="group" aria-label="Crop frame">'+
+    '<button type="button" data-crop-handle="nw" aria-label="Resize crop top left"></button>'+
+    '<button type="button" data-crop-handle="n" aria-label="Resize crop top"></button>'+
+    '<button type="button" data-crop-handle="ne" aria-label="Resize crop top right"></button>'+
+    '<button type="button" data-crop-handle="e" aria-label="Resize crop right"></button>'+
+    '<button type="button" data-crop-handle="se" aria-label="Resize crop bottom right"></button>'+
+    '<button type="button" data-crop-handle="s" aria-label="Resize crop bottom"></button>'+
+    '<button type="button" data-crop-handle="sw" aria-label="Resize crop bottom left"></button>'+
+    '<button type="button" data-crop-handle="w" aria-label="Resize crop left"></button>'+
+   '</div></div></div>'+
+  '<footer class="ls-crop-footer"><div class="ls-crop-ratios" role="group" aria-label="Crop aspect ratio">'+ratios+'</div>'+
+   '<div class="ls-crop-actions"><button type="button" data-crop-action="rotate-left" aria-label="Rotate photo left">↶ Rotate</button>'+
+   '<button type="button" data-crop-action="rotate-right" aria-label="Rotate photo right">↻ Rotate</button>'+
+   '<button type="button" data-crop-action="undo" aria-label="Undo crop change" disabled>Undo</button>'+
+   '<button type="button" data-crop-action="redo" aria-label="Redo crop change" disabled>Redo</button>'+
+   '<button type="button" data-crop-action="apply" class="is-primary">Done</button></div></footer>';
+ const img=cropOverlay.querySelector('.ls-crop-source');
+ img.src=o.src||'';img.addEventListener('load',layoutCropEditor,{once:true});
+ requestAnimationFrame(layoutCropEditor);
+}
+function openCropEditor(o){
+ if(!o||o.type!=='image'||o.locked)return;
+ selected=o.id;hidePanel();setMoreMenu(false);
+ cropEdit={id:o.id,initial:o.crop?clone(o.crop):null,draft:o.crop?clone(o.crop):fullCrop(0),preset:o.crop?'free':'original',past:[],future:[],gesture:null,planeWidth:0,planeHeight:0};
+ renderCropEditor();
+}
+function closeCropEditor(){
+ cropEdit=null;cropOverlay.innerHTML='';ui.classList.remove('is-crop-mode');
+ positionLayer();draw();
+}
+function fitCropRectToRatio(crop,presetRatio,planeAspect){
+ if(!presetRatio)return crop;
+ const targetWOverH=presetRatio/Math.max(.001,planeAspect);
+ let w=crop.width,h=crop.height;
+ if(w/h>targetWOverH)w=h*targetWOverH;else h=w/targetWOverH;
+ w=clamp(w,.04,1);h=clamp(h,.04,1);
+ const cx=crop.x+crop.width/2,cy=crop.y+crop.height/2;
+ if(w>1){h/=w;w=1;}if(h>1){w/=h;h=1;}
+ return{x:clamp(cx-w/2,0,1-w),y:clamp(cy-h/2,0,1-h),width:w,height:h,rotation:crop.rotation};
+}
+function applyCropPreset(id){
+ if(!cropEdit)return;
+ const preset=CROP_PRESETS.find(item=>item.id===id);if(!preset)return;
+ snapshotCrop();cropEdit.preset=id;
+ if(id==='original'){
+  cropEdit.draft=fullCrop(cropEdit.draft.rotation);
+ }else if(id==='free'){
+  // Free keeps the current frame; the user may resize each edge independently.
+ }else{
+  const ratio=preset.ratio;
+  cropEdit.draft=fitCropRectToRatio(cropEdit.draft,ratio,cropPlaneAspect());
+ }
+ updateCropFrame();
+}
+function rotateCrop(direction){
+ if(!cropEdit)return;
+ snapshotCrop();
+ cropEdit.draft=fullCrop(((cropEdit.draft.rotation+(direction*90))%360+360)%360);
+ cropEdit.preset='original';layoutCropEditor();
+}
+function resetCrop(){
+ if(!cropEdit)return;
+ snapshotCrop();cropEdit.draft=fullCrop(0);cropEdit.preset='original';layoutCropEditor();
+}
+function undoCrop(){
+ if(!cropEdit||!cropEdit.past.length)return;
+ cropEdit.future.push({draft:clone(cropEdit.draft),preset:cropEdit.preset});
+ const prev=cropEdit.past.pop();cropEdit.draft=prev.draft;cropEdit.preset=prev.preset;layoutCropEditor();
+}
+function redoCrop(){
+ if(!cropEdit||!cropEdit.future.length)return;
+ cropEdit.past.push({draft:clone(cropEdit.draft),preset:cropEdit.preset});
+ const next=cropEdit.future.pop();cropEdit.draft=next.draft;cropEdit.preset=next.preset;layoutCropEditor();
+}
+function commitCrop(){
+ if(!cropEdit)return;
+ const session=cropEdit,o=items.find(item=>item.id===session.id);if(!o){closeCropEditor();return;}
+ const crop=clone(session.draft),natural=safeNatural(o);
+ saveHistory();
+ const isFull=crop.rotation===0&&crop.x<.0001&&crop.y<.0001&&crop.width>.9999&&crop.height>.9999;
+ const aspect=isFull?natural.width/natural.height:cropAspect(crop,natural);
+ const area=Math.max(24*24,(o.w*canvasWidth)*(o.h*canvasHeight));
+ const widthPx=Math.sqrt(area*aspect),heightPx=Math.sqrt(area/aspect);
+ const cx=o.x+o.w/2,cy=o.y+o.h/2;
+ o.crop=isFull?null:crop;
+ o.fit='cover';
+ o.w=widthPx/Math.max(1,canvasWidth);o.h=heightPx/Math.max(1,canvasHeight);
+ o.x=cx-o.w/2;o.y=cy-o.h/2;
+ selected=o.id;closeCropEditor();
+}
+function beginCropGesture(e){
+ if(!cropEdit||e.button!==0&&e.pointerType==='mouse')return;
+ const handle=e.target.closest('[data-crop-handle]'),frame=e.target.closest('.ls-crop-frame');
+ if(!frame)return;
+ e.preventDefault();e.stopPropagation();
+ const c=cropEdit.draft;
+ snapshotCrop();
+ cropEdit.gesture={
+  pointerId:e.pointerId,kind:handle?'resize':'move',handle:handle?handle.dataset.cropHandle:null,
+  sx:e.clientX,sy:e.clientY,start:clone(c),planeWidth:cropEdit.planeWidth,planeHeight:cropEdit.planeHeight
+ };
+ try{cropOverlay.setPointerCapture(e.pointerId);}catch(_){}
+}
+function moveCropGesture(e){
+ if(!cropEdit||!cropEdit.gesture||e.pointerId!==cropEdit.gesture.pointerId)return;
+ const g=cropEdit.gesture,d=cropEdit.draft;
+ e.preventDefault();
+ const dx=(e.clientX-g.sx)/Math.max(1,g.planeWidth),dy=(e.clientY-g.sy)/Math.max(1,g.planeHeight);
+ if(g.kind==='move'){
+  d.x=clamp(g.start.x+dx,0,1-d.width);d.y=clamp(g.start.y+dy,0,1-d.height);
+  updateCropFrame();return;
+ }
+ const minW=Math.min(.22,28/Math.max(1,g.planeWidth)),minH=Math.min(.22,28/Math.max(1,g.planeHeight));
+ let left=g.start.x,right=g.start.x+g.start.width,top=g.start.y,bottom=g.start.y+g.start.height;
+ const h=g.handle;
+ if(h.includes('w'))left=clamp(g.start.x+dx,0,right-minW);
+ if(h.includes('e'))right=clamp(g.start.x+g.start.width+dx,left+minW,1);
+ if(h.includes('n'))top=clamp(g.start.y+dy,0,bottom-minH);
+ if(h.includes('s'))bottom=clamp(g.start.y+g.start.height+dy,top+minH,1);
+ const preset=CROP_PRESETS.find(item=>item.id===cropEdit.preset);
+ if(preset&&preset.ratio){
+  const target=preset.ratio/Math.max(.001,cropPlaneAspect());
+  let w=right-left,height=bottom-top;
+  if(h==='e'||h==='w'){height=w/target;}else if(h==='n'||h==='s'){w=height*target;}else if(w/height>target){height=w/target;}else{w=height*target;}
+  if(h.includes('w'))left=right-w;else if(h.includes('e'))right=left+w;else{const cx=(left+right)/2;left=cx-w/2;right=cx+w/2;}
+  if(h.includes('n'))top=bottom-height;else if(h.includes('s'))bottom=top+height;else{const cy=(top+bottom)/2;top=cy-height/2;bottom=cy+height/2;}
+ }
+ // Clamp the finished viewport and preserve a usable minimum crop region.
+ let width=clamp(right-left,minW,1),height=clamp(bottom-top,minH,1);
+ left=clamp(left,0,1-width);top=clamp(top,0,1-height);
+ d.x=left;d.y=top;d.width=width;d.height=height;
+ updateCropFrame();
+}
+function finishCropGesture(e){
+ if(!cropEdit||!cropEdit.gesture||(e&&e.pointerId!==cropEdit.gesture.pointerId))return;
+ const g=cropEdit.gesture;cropEdit.gesture=null;
+ const a=g.start,b=cropEdit.draft;
+ if(Math.abs(a.x-b.x)+Math.abs(a.y-b.y)+Math.abs(a.width-b.width)+Math.abs(a.height-b.height)<.00001)cropEdit.past.pop();
+ updateCropHistoryButtons();
+}
+cropOverlay.addEventListener('pointerdown',beginCropGesture);
+document.addEventListener('pointermove',moveCropGesture,{passive:false});
+document.addEventListener('pointerup',finishCropGesture);
+document.addEventListener('pointercancel',finishCropGesture);
+
 const brushWidths={pen:2.5,marker:8,pencil:3.5,brush:11,eraser:28};
 function updateDrawingControls(){
  ui.classList.toggle('has-canvas-content',items.length>0||strokes.length>0);
