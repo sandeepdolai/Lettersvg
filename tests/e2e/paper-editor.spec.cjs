@@ -248,6 +248,48 @@ test("layers may extend beyond the canvas but stay clipped to paper bounds", asy
   await expect(page.locator("#letter-paper")).toHaveCount(1);
 });
 
+test("drawn strokes can be moved after leaving Draw mode", async ({ page }) => {
+  await openRealPaper(page);
+  await openEditor(page);
+  await page.locator('[data-tool="draw"]').click();
+  await expect(page.locator("body")).toHaveClass(/is-paper-drawing-mode/);
+
+  const ink = page.locator(".ls-ink-layer");
+  let canvas = await ink.boundingBox();
+  expect(canvas).not.toBeNull();
+  const start = { x: canvas.x + canvas.width * 0.25, y: canvas.y + canvas.height * 0.44 };
+  const end = { x: canvas.x + canvas.width * 0.55, y: canvas.y + canvas.height * 0.44 };
+  await page.mouse.move(start.x, start.y);
+  await page.mouse.down();
+  await page.mouse.move(end.x, end.y, { steps: 8 });
+  await page.mouse.up();
+  await expect(page.locator(".ls-visible-ink > path")).toHaveCount(1);
+
+  // Done exits freehand drawing and switches the existing stroke into move mode.
+  await page.locator('[data-do="next"]').click();
+  await expect(page.locator("body")).not.toHaveClass(/is-paper-drawing-mode/);
+  const target = page.locator(".ls-ink-move-target").first();
+  await expect(target).toBeVisible();
+  const before = await page.locator(".ls-visible-ink > path").first().boundingBox();
+  const hit = await target.boundingBox();
+  expect(before).not.toBeNull();
+  expect(hit).not.toBeNull();
+
+  const sx = hit.x + hit.width * 0.5;
+  const sy = hit.y + hit.height * 0.5;
+  await page.mouse.move(sx, sy);
+  await page.mouse.down();
+  await page.mouse.move(sx + 34, sy + 22, { steps: 6 });
+  await page.mouse.up();
+
+  const after = await page.locator(".ls-visible-ink > path").first().boundingBox();
+  expect(after).not.toBeNull();
+  expect(after.x).toBeGreaterThan(before.x + 18);
+  expect(after.y).toBeGreaterThan(before.y + 10);
+  await expect(page.locator("#paper-page-viewport")).toHaveCSS("overflow", "hidden");
+  await expect(page.locator("#letter-paper")).toHaveCount(1);
+});
+
 test("Eraser removes existing ink instead of drawing a white layer", async ({ page }) => {
   await openRealPaper(page);
   await openEditor(page);
