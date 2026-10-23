@@ -624,3 +624,145 @@ body.is-paper-drawing-mode .ls-ink-layer {
  width:auto;
  max-width:none;
 }
+
+
+/* Smart Edit parity: real layer controls, non-destructive crop workspace and
+   independent selection handles. The existing LetterSVG toolbar remains intact. */
+.ls-object { transform-origin:center center; }
+.ls-selection-frame {
+ position:absolute;box-sizing:border-box;border:1.5px solid #a92f2b;
+ transform-origin:center center;pointer-events:none;overflow:visible;
+}
+.ls-selection-frame .ls-object-actions { z-index:4;pointer-events:auto;gap:3px;max-width:calc(100vw - 24px); }
+.ls-selection-frame .ls-object-action { min-width:28px;height:29px;padding:0 5px; }
+.ls-selection-frame .ls-resize-handle { right:2px!important;bottom:2px!important;width:17px;height:17px;pointer-events:auto; }
+.ls-selection-frame .ls-rotate-handle {
+ position:absolute;z-index:5;left:50%;top:4px;transform:translateX(-50%);
+ display:grid;place-items:center;width:25px;height:25px;padding:0;
+ border:1.5px solid #fff;border-radius:50%;background:#a92f2b;color:#fff;
+ box-shadow:0 1px 5px rgba(0,0,0,.2);font-size:16px!important;line-height:1;
+ cursor:grab;pointer-events:auto;touch-action:none;
+}
+.ls-object.is-locked { cursor:default; }
+.ls-object.is-hidden { display:none!important; }
+.ls-object.is-locked:active { cursor:default; }
+
+/* Layers drawer — reached through the existing More button; no new toolbar button. */
+.ls-layers-list { display:grid;gap:6px;max-height:min(45dvh,360px);overflow:auto;overscroll-behavior:contain;padding:1px; }
+.ls-layer-row {
+ display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:5px;
+ min-width:0;padding:5px;border:1px solid #eee8e3;border-radius:12px;
+ background:#fffdfa;transition:background 120ms ease,border-color 120ms ease;
+}
+.ls-layer-row.is-selected { border-color:#e8bcb3;background:#fff2ef; }
+.ls-layer-row.is-hidden .ls-layer-pick { opacity:.48; }
+.ls-layer-pick {
+ display:flex;align-items:center;gap:9px;min-width:0;min-height:36px;padding:0 5px;
+ border:0;background:transparent;color:#292321;text-align:left;cursor:pointer;
+}
+.ls-layer-type {
+ display:grid;place-items:center;flex:0 0 29px;width:29px;height:29px;
+ border:1px solid #ebe5e0;border-radius:8px;background:#f6f2ef;color:#9e3d34;
+ font:600 15px/1 Georgia,serif;
+}
+.ls-layer-name { overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;font-weight:600; }
+.ls-layer-actions { display:flex;align-items:center;gap:1px; }
+.ls-layer-actions button {
+ display:grid;place-items:center;flex:0 0 23px;width:23px;height:30px;padding:0;
+ border:0;border-radius:7px;background:transparent;color:#5f5752;font-size:15px!important;line-height:1;cursor:pointer;
+}
+.ls-layer-actions button:hover:not(:disabled) { background:#f2e9e4;color:#a92f2b; }
+.ls-layer-actions button:disabled { opacity:.25;cursor:default; }
+.ls-layers-empty {
+ padding:24px 16px;border:1px dashed #e5dcd6;border-radius:14px;
+ color:#877b74;text-align:center;font-size:12px;line-height:1.5;
+}
+
+/* Full-screen crop editor. The original image stays intact; the crop frame is
+   moved over it, and a normalized crop is committed only when Done is pressed. */
+.ls-crop-overlay {
+ display:none;position:fixed;inset:0;z-index:2147483647;
+ box-sizing:border-box;background:#f8f7f4;color:#262321;
+ font-family:ui-rounded,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+ overflow:hidden;touch-action:manipulation;
+}
+.ls-editor-shell.is-crop-mode .ls-crop-overlay { display:block; }
+.ls-editor-shell.is-crop-mode .ls-editor-topbar,
+.ls-editor-shell.is-crop-mode .ls-editor-dock,
+.ls-editor-shell.is-crop-mode .ls-drawing-dock,
+.ls-editor-shell.is-crop-mode .ls-brush-size-control,
+.ls-editor-shell.is-crop-mode .ls-canvas-hint,
+.ls-editor-shell.is-crop-mode .ls-more-menu,
+.ls-editor-shell.is-crop-mode .ls-editor-panel { display:none!important; }
+.ls-crop-topbar {
+ position:absolute;top:0;left:0;right:0;
+ padding:calc(8px + env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) 8px max(12px,env(safe-area-inset-left));
+ min-height:58px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;
+ border-bottom:1px solid rgba(40,32,28,.07);background:rgba(248,247,244,.97);
+}
+.ls-crop-topbar strong { font-size:14px;font-weight:650;text-align:center;white-space:nowrap; }
+.ls-crop-topbar button {
+ min-height:36px;padding:0 10px;border:0;border-radius:11px;background:transparent;
+ color:#36302c;font-size:13px!important;font-weight:600!important;cursor:pointer;
+}
+.ls-crop-topbar button:first-child { justify-self:start; }
+.ls-crop-topbar button:last-child { justify-self:end;background:#e9e8e2; }
+.ls-crop-workspace {
+ position:absolute;top:calc(62px + env(safe-area-inset-top));left:10px;right:10px;
+ bottom:calc(154px + env(safe-area-inset-bottom));
+ display:flex;align-items:center;justify-content:center;overflow:hidden;
+ touch-action:none;user-select:none;-webkit-user-select:none;
+}
+.ls-crop-photo-plane {
+ position:relative;flex:none;overflow:visible;background:#242321;
+ box-shadow:0 8px 30px rgba(28,22,19,.14);touch-action:none;
+}
+.ls-crop-source { display:block;max-width:none!important;max-height:none!important;user-select:none;-webkit-user-drag:none;pointer-events:none; }
+.ls-crop-frame {
+ position:absolute;box-sizing:border-box;border:2px solid #fff;
+ box-shadow:0 0 0 9999px rgba(24,20,18,.48);
+ touch-action:none;cursor:move;user-select:none;
+}
+.ls-crop-frame button {
+ position:absolute;z-index:2;box-sizing:border-box;width:16px;height:16px;padding:0;
+ border:2px solid #fff;border-radius:4px;background:#a92f2b;
+ box-shadow:0 1px 5px rgba(0,0,0,.24);touch-action:none;cursor:crosshair;
+}
+.ls-crop-frame [data-crop-handle="nw"] { left:-8px;top:-8px; }
+.ls-crop-frame [data-crop-handle="n"] { left:50%;top:-8px;transform:translateX(-50%);width:24px;height:6px;border-radius:4px; }
+.ls-crop-frame [data-crop-handle="ne"] { right:-8px;top:-8px; }
+.ls-crop-frame [data-crop-handle="e"] { right:-8px;top:50%;transform:translateY(-50%);width:6px;height:24px;border-radius:4px; }
+.ls-crop-frame [data-crop-handle="se"] { right:-8px;bottom:-8px; }
+.ls-crop-frame [data-crop-handle="s"] { left:50%;bottom:-8px;transform:translateX(-50%);width:24px;height:6px;border-radius:4px; }
+.ls-crop-frame [data-crop-handle="sw"] { left:-8px;bottom:-8px; }
+.ls-crop-frame [data-crop-handle="w"] { left:-8px;top:50%;transform:translateY(-50%);width:6px;height:24px;border-radius:4px; }
+.ls-crop-footer {
+ position:absolute;left:0;right:0;bottom:0;display:grid;gap:9px;
+ padding:8px max(10px,env(safe-area-inset-right)) calc(10px + env(safe-area-inset-bottom)) max(10px,env(safe-area-inset-left));
+ background:linear-gradient(180deg,rgba(248,247,244,.94),#f8f7f4 20%);
+}
+.ls-crop-ratios { display:flex;align-items:center;gap:5px;overflow-x:auto;padding:2px 1px 6px;scrollbar-width:none;overscroll-behavior-x:contain; }
+.ls-crop-ratios::-webkit-scrollbar { display:none; }
+.ls-crop-ratios button {
+ flex:0 0 auto;min-width:47px;min-height:32px;padding:0 9px;
+ border:1px solid #e3ded8;border-radius:10px;background:#fff;color:#645b55;
+ font-size:10px!important;font-weight:600!important;white-space:nowrap;cursor:pointer;
+}
+.ls-crop-ratios button.is-active { border-color:#bd554a;background:#fbece8;color:#9c312b; }
+.ls-crop-actions { display:flex;align-items:center;gap:6px; }
+.ls-crop-actions button {
+ flex:1 1 0;min-width:0;min-height:40px;padding:0 7px;
+ border:1px solid #e3ded8;border-radius:11px;background:#fff;color:#4b433e;
+ font-size:11px!important;font-weight:650!important;white-space:nowrap;cursor:pointer;
+}
+.ls-crop-actions button:disabled { opacity:.36;cursor:default; }
+.ls-crop-actions button.is-primary { border-color:#a92f2b;background:#a92f2b;color:#fff; }
+@media(max-width:360px) {
+ .ls-layer-actions { gap:0; }
+ .ls-layer-actions button { flex-basis:21px;width:21px;font-size:13px!important; }
+ .ls-layer-type { flex-basis:25px;width:25px;height:25px; }
+ .ls-layer-name { font-size:10px; }
+ .ls-crop-actions { gap:4px; }
+ .ls-crop-actions button { padding:0 4px;font-size:10px!important; }
+ .ls-crop-workspace { bottom:calc(166px + env(safe-area-inset-bottom)); }
+}
