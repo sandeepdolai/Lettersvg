@@ -26,8 +26,14 @@ async function openRealPaper(page) {
   await expect(page.locator("#letter-paper")).toHaveCount(1);
   await expect.poll(async () => {
     const canvas = await page.locator("#paper-page-viewport").boundingBox();
-    return canvas ? Math.abs(canvas.width / canvas.height - 16 / 9) : 1;
+    return canvas ? Math.abs(canvas.width / canvas.height - 2 / 3) : 1;
   }, { timeout: 7_000 }).toBeLessThan(0.04);
+  const paper = await page.locator("#paper-surface").boundingBox();
+  const canvas = await page.locator("#paper-page-viewport").boundingBox();
+  expect(paper).not.toBeNull();
+  expect(canvas).not.toBeNull();
+  expect(Math.abs(paper.width / paper.height - 16 / 9)).toBeLessThan(0.04);
+  expect(Math.abs(paper.width / paper.height - canvas.width / canvas.height)).toBeGreaterThan(0.5);
 }
 
 async function openEditor(page) {
@@ -139,14 +145,14 @@ test("Draw mode uses the bounded paper viewport and records a stroke", async ({ 
   await expect(page.locator("#letter-paper")).toHaveCount(1);
 });
 
-test("the visible editing canvas fills the 16:9 surface instead of a shallow strip", async ({ page }) => {
+test("the visible editing canvas fills its own centered 2:3 surface", async ({ page }) => {
   await openRealPaper(page);
   await openEditor(page);
   const canvas = page.locator("#paper-page-viewport");
   const content = page.locator("#paper-page-content");
   const bounds = await canvas.boundingBox();
   expect(bounds).not.toBeNull();
-  expect(Math.abs(bounds.width / bounds.height - 16 / 9)).toBeLessThan(0.04);
+  expect(Math.abs(bounds.width / bounds.height - 2 / 3)).toBeLessThan(0.04);
   const background = await content.evaluate(el => {
     const style = getComputedStyle(el, "::before");
     return { top: style.top, right: style.right, bottom: style.bottom, left: style.left, width: style.width, height: style.height };
@@ -155,14 +161,16 @@ test("the visible editing canvas fills the 16:9 surface instead of a shallow str
   expect(background.right).toBe("0px");
   expect(background.bottom).toBe("0px");
   expect(background.left).toBe("0px");
-  expect(Math.abs(Number.parseFloat(background.width) / Math.max(1, Number.parseFloat(background.height)) - 16 / 9)).toBeLessThan(0.04);
+  const contentBounds = await content.boundingBox();
+  expect(contentBounds).not.toBeNull();
+  expect(Math.abs(contentBounds.width / contentBounds.height - 2 / 3)).toBeLessThan(0.04);
   const hint = await page.locator(".ls-canvas-hint").boundingBox();
   expect(hint).not.toBeNull();
   expect(hint.width).toBeLessThan(bounds.width * 0.55);
   expect(hint.height).toBeLessThan(bounds.height * 0.6);
 });
 
-test("fullscreen canvas keeps the 16:9 target on desktop and mobile", async ({ page }) => {
+test("fullscreen canvas is 2:3 while the outer paper remains 16:9", async ({ page }) => {
   await openRealPaper(page);
   const canvas = page.locator("#paper-page-viewport");
   await expect(canvas).toBeVisible();
@@ -170,5 +178,9 @@ test("fullscreen canvas keeps the 16:9 target on desktop and mobile", async ({ p
   expect(bounds).not.toBeNull();
   expect(bounds.width).toBeGreaterThan(0);
   expect(bounds.height).toBeGreaterThan(0);
-  expect(Math.abs(bounds.width / bounds.height - 16 / 9)).toBeLessThan(0.04);
+  expect(Math.abs(bounds.width / bounds.height - 2 / 3)).toBeLessThan(0.04);
+  const paper = await page.locator("#paper-surface").boundingBox();
+  expect(paper).not.toBeNull();
+  expect(Math.abs(paper.width / paper.height - 16 / 9)).toBeLessThan(0.04);
+  expect(Math.abs(paper.width / paper.height - bounds.width / bounds.height)).toBeGreaterThan(0.5);
 });
