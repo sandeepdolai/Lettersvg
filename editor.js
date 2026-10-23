@@ -148,6 +148,8 @@ function chooseInkColor(){
  panel.classList.add('is-color-palette');
  ui.classList.add('is-color-palette-open');
  showPanel();
+ // Reapply viewport-edge placement after showPanel changes the panel state.
+ syncEditorChromeToCanvas();
 }
 function enterDrawingMode(){
  if(!editing||!document.body.classList.contains('is-paper-fullscreen'))return;drawingMode=true;selected=null;panel.classList.remove('is-open','is-color-palette');ui.classList.remove('is-color-palette-open');setMoreMenu(false);ui.classList.add('is-drawing-mode');document.body.classList.add('is-paper-drawing-mode');
