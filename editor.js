@@ -146,6 +146,22 @@ function resetPaperSurfaceHeight(){
  surface.setAttribute('height',String(originalSurfaceHeight));
  paperShadow.setAttribute('height',String(originalShadowHeight));
 }
+function syncEditorChromeToCanvas(){
+ const r=layer.getBoundingClientRect();
+ if(!r.width||!r.height)return;
+ const right=Math.max(0,window.innerWidth-r.right);
+ const bottom=Math.max(0,window.innerHeight-r.bottom);
+ const topbar=ui.querySelector('.ls-editor-topbar');
+ const dock=ui.querySelector('.ls-editor-dock');
+ const drawingDock=ui.querySelector('.ls-drawing-dock');
+ const slider=ui.querySelector('.ls-brush-size-control');
+ if(topbar){topbar.style.top=(r.top+10)+'px';topbar.style.left=(r.left+12)+'px';topbar.style.right=(right+12)+'px';}
+ if(dock){dock.style.bottom=(bottom+12)+'px';dock.style.left=(r.left+r.width/2)+'px';dock.style.width=Math.max(0,r.width-24)+'px';}
+ if(drawingDock){drawingDock.style.left=(r.left+12)+'px';drawingDock.style.right=(right+12)+'px';drawingDock.style.bottom=(bottom+4)+'px';drawingDock.style.height=Math.min(132,Math.max(92,r.height*.18))+'px';}
+ if(slider){slider.style.top=(r.top+Math.max(100,r.height*.3))+'px';slider.style.right=right+'px';slider.style.height=Math.max(120,Math.min(300,r.height*.42))+'px';}
+ if(panel.classList.contains('is-color-palette')){panel.style.left=r.left+'px';panel.style.right=right+'px';panel.style.bottom=bottom+'px';}
+ else if(panel.classList.contains('is-open')){panel.style.left=(r.left+r.width/2)+'px';panel.style.bottom=(bottom+96)+'px';}
+}
 function positionLayer(){
  const fullscreen=document.body.classList.contains('is-paper-fullscreen');
  // The content layer is inside the original SVG paper. Keep it rendered when the
@@ -168,6 +184,7 @@ function positionLayer(){
   return;
  }
  const r=layer.getBoundingClientRect();if(!r.width||!r.height)return;
+ syncEditorChromeToCanvas();
  canvasWidth=r.width;canvasHeight=r.height;
  const localWidth=layer.clientWidth||803,localHeight=layer.clientHeight||690;
  contentScale=Math.min(2.2,Math.max(.65,canvasWidth/390));
@@ -433,6 +450,7 @@ new MutationObserver(()=>{
 // The embedded page belongs to the paper at all times, even before fullscreen is opened.
 positionLayer();
 window.addEventListener('resize',()=>requestAnimationFrame(positionLayer));window.addEventListener('orientationchange',()=>setTimeout(positionLayer,120));
+window.addEventListener('scroll',()=>requestAnimationFrame(positionLayer),{passive:true});
  if(window.visualViewport){window.visualViewport.addEventListener('resize',()=>requestAnimationFrame(positionLayer));window.visualViewport.addEventListener('scroll',()=>requestAnimationFrame(positionLayer));}
 draw();histButtons();
 })();
