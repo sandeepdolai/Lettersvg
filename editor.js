@@ -34,6 +34,68 @@ function nextLayerY(){
  return .16+Math.min(items.length,4)*.025;
 }
 function chosen(){return items.find(o=>o.id===selected)||null;}
+function clamp(value,min,max){return Math.max(min,Math.min(max,value));}
+function safeNatural(o){return o&&o.natural&&o.natural.width>0&&o.natural.height>0?o.natural:{width:Math.max(1,(Number(o&&o.ratio)||1.5)*1000),height:1000};}
+function fullCrop(rotation){return{x:0,y:0,width:1,height:1,rotation:Number(rotation)||0};}
+function rotatedImageDims(natural,rotation){
+ const w=Math.max(1,natural.width),h=Math.max(1,natural.height),rad=((Number(rotation)||0)*Math.PI)/180;
+ const c=Math.abs(Math.cos(rad)),ss=Math.abs(Math.sin(rad));
+ if(Math.min(c,ss)<1e-6)return ss>c?{width:h,height:w}:{width:w,height:h};
+ return{width:w*c+h*ss,height:w*ss+h*c};
+}
+function normalizedCrop(o){return o&&o.crop?{x:clamp(Number(o.crop.x)||0,0,1),y:clamp(Number(o.crop.y)||0,0,1),width:clamp(Number(o.crop.width)||1,.01,1),height:clamp(Number(o.crop.height)||1,.01,1),rotation:Number(o.crop.rotation)||0}:fullCrop(0);}
+function cropAspect(crop,natural){
+ const dims=rotatedImageDims(natural,crop.rotation);
+ return Math.max(.001,crop.width*dims.width)/Math.max(.001,crop.height*dims.height);
+}
+function cropImageStyle(crop,natural){
+ const W=Math.max(1,natural.width),H=Math.max(1,natural.height),dims=rotatedImageDims(natural,crop.rotation);
+ const rect={x:crop.x*dims.width,y:crop.y*dims.height,width:Math.max(1,crop.width*dims.width),height:Math.max(1,crop.height*dims.height)};
+ const sx=1/rect.width,sy=1/rect.height,cRx=rect.x+rect.width/2,cRy=rect.y+rect.height/2;
+ const originX=.5+(.5*dims.width-cRx)*sx,originY=.5+(.5*dims.height-cRy)*sy;
+ const rad=(crop.rotation*Math.PI)/180,swap=Math.abs(Math.sin(rad))>Math.abs(Math.cos(rad));
+ const boxW=swap?W*sy:W*sx,boxH=swap?H*sx:H*sy;
+ return{left:(originX-boxW/2)*100,top:(originY-boxH/2)*100,width:boxW*100,height:boxH*100,rotate:crop.rotation};
+}
+function escapeHTML(value){return String(value==null?'':value).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));}
+function layerName(o){
+ if(o.type==='image')return o.crop?'Cropped photo':'Photo';
+ if(o.type==='text')return 'Text · '+String(o.value||'Untitled text').replace(/\s+/g,' ').slice(0,30);
+ if(o.type==='sticker')return 'Sticker · '+String(o.value||'Element').slice(0,24);
+ return 'Shape · '+String(o.shape||'Element');
+}
+function layersPanel(){
+ setMoreMenu(false);
+ const rows=items.slice().reverse().map(o=>{
+  const index=items.indexOf(o),active=o.id===selected;
+  const typeIcon=o.type==='image'?'▧':o.type==='text'?'A':o.type==='sticker'?'✦':'◯';
+  return '<div class="ls-layer-row'+(active?' is-selected':'')+(o.visible===false?' is-hidden':'')+'" data-layer-row="'+o.id+'">'+
+   '<button class="ls-layer-pick" data-layer-action="select" data-layer-id="'+o.id+'" aria-pressed="'+active+'"><span class="ls-layer-type">'+typeIcon+'</span><span class="ls-layer-name">'+escapeHTML(layerName(o))+'</span></button>'+
+   '<div class="ls-layer-actions">'+
+    '<button data-layer-action="up" data-layer-id="'+o.id+'" aria-label="Bring layer forward" title="Bring forward" '+(index===items.length-1?'disabled':'')+'>↑</button>'+
+    '<button data-layer-action="down" data-layer-id="'+o.id+'" aria-label="Send layer backward" title="Send backward" '+(index===0?'disabled':'')+'>↓</button>'+
+    '<button data-layer-action="visible" data-layer-id="'+o.id+'" aria-label="'+(o.visible===false?'Show layer':'Hide layer')+'" title="'+(o.visible===false?'Show':'Hide')+'">'+(o.visible===false?'◌':'◉')+'</button>'+
+    '<button data-layer-action="lock" data-layer-id="'+o.id+'" aria-label="'+(o.locked?'Unlock layer':'Lock layer')+'" title="'+(o.locked?'Unlock':'Lock')+'">'+(o.locked?'▣':'◇')+'</button>'+
+    '<button data-layer-action="duplicate" data-layer-id="'+o.id+'" aria-label="Duplicate layer" title="Duplicate">＋</button>'+
+    '<button data-layer-action="delete" data-layer-id="'+o.id+'" aria-label="Delete layer" title="Delete">×</button>'+
+   '</div></div>';
+ }).join('');
+ panel.innerHTML='<div class="ls-panel-header"><div><h3>Layers</h3><p>Arrange objects on your canvas</p></div><button class="ls-panel-close" data-do="close-panel" aria-label="Close panel">×</button></div>'+
+  (items.length?'<div class="ls-layers-list" role="list">'+rows+'</div>':'<div class="ls-layers-empty">Add a photo, text or element to create your first layer.</div>');
+ showPanel();
+}
+function reorderLayer(id,direction){
+ const index=items.findIndex(o=>o.id===id),next=index+direction;
+ if(index<0||next<0||next>=items.length)return;
+ saveHistory();const [item]=items.splice(index,1);items.splice(next,0,item);selected=id;draw();
+}
+function duplicateLayer(id){
+ const index=items.findIndex(o=>o.id===id);if(index<0)return;
+ saveHistory();const copy=clone(items[index]);copy.id=nextId++;copy.visible=true;copy.locked=false;
+ copy.x=clamp(Number(copy.x)+.035,0,1-copy.w);copy.y=clamp(Number(copy.y)+.035,0,1-copy.h);
+ items.splice(index+1,0,copy);selected=copy.id;draw();
+}
+
 const brushWidths={pen:2.5,marker:8,pencil:3.5,brush:11,eraser:28};
 function updateDrawingControls(){
  ui.classList.toggle('has-canvas-content',items.length>0||strokes.length>0);
