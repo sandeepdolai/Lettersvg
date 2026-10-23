@@ -202,7 +202,7 @@ function syncEditorChromeToCanvas(){
  if(panel.classList.contains('is-color-palette')){
   Object.assign(panel.style,{
    position:'fixed',left:'0',right:'0',top:'auto',
-   bottom:'env(safe-area-inset-bottom)',width:'100%',maxWidth:'none',
+   bottom:'0px',width:'100%',maxWidth:'none',boxSizing:'border-box',margin:'0',
    maxHeight:'none',transform:'translateY(0)',transition:'none'
   });
  } else if(panel.classList.contains('is-open')){
