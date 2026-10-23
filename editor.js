@@ -725,7 +725,7 @@ function measureTextHeight(o,widthPx){
    else if(o.type==='image'){
     const natural=safeNatural(o),aspect=o.crop?cropAspect(o.crop,natural):(Number(o.ratio)||natural.width/natural.height);
     g.h=(g.w*canvasWidth/Math.max(.001,aspect))/Math.max(1,canvasHeight);
-   }else g.h=clamp(g.h,.015,1);
+   }else g.h=Math.max(.015,g.h);
 
    g.h=Math.max(.015,g.h);
    // Do not pull or shrink artwork back into the paper. The page's paint clip
