@@ -102,7 +102,7 @@ function reorderLayer(id,direction){
 function duplicateLayer(id){
  const index=items.findIndex(o=>o.id===id);if(index<0)return;
  saveHistory();const copy=clone(items[index]);copy.id=nextId++;copy.visible=true;copy.locked=false;
- copy.x=clamp(Number(copy.x)+.035,0,1-copy.w);copy.y=clamp(Number(copy.y)+.035,0,1-copy.h);
+ copy.x=(Number(copy.x)||0)+.035;copy.y=(Number(copy.y)||0)+.035;
  items.splice(index+1,0,copy);selected=copy.id;draw();
 }
 
@@ -605,17 +605,12 @@ function positionLayer(){
  draw();
 }
 function clampLayerModel(o){
- const rad=(Number(o.rotation)||0)*Math.PI/180;
- let w=Math.max(.025,Number(o.w)||.1),h=Math.max(.025,Number(o.h)||.1);
- const c=Math.abs(Math.cos(rad)),sn=Math.abs(Math.sin(rad));
- const rotatedW=()=>w*canvasWidth*c+h*canvasHeight*sn;
- const rotatedH=()=>w*canvasWidth*sn+h*canvasHeight*c;
- const fit=Math.min(1,canvasWidth/Math.max(1,rotatedW()),canvasHeight/Math.max(1,rotatedH()));
- if(fit<1){w*=fit;h*=fit;o.w=w;o.h=h;}
- const rx=rotatedW()/Math.max(1,canvasWidth),ry=rotatedH()/Math.max(1,canvasHeight);
- const cx=clamp((Number(o.x)||0)+w/2,rx/2,1-rx/2);
- const cy=clamp((Number(o.y)||0)+h/2,ry/2,1-ry/2);
- o.x=cx-w/2;o.y=cy-h/2;
+ // Keep layer coordinates free to cross the paper bounds. Rendering is clipped by
+ // the fixed canvas viewport, so negative and greater-than-one positions are valid.
+ o.w=Math.max(.025,Number(o.w)||.1);
+ o.h=Math.max(.025,Number(o.h)||.1);
+ o.x=Number.isFinite(Number(o.x))?Number(o.x):0;
+ o.y=Number.isFinite(Number(o.y))?Number(o.y):0;
 }
 function actionButton(op,label,title,o){
  const b=document.createElement('button');b.type='button';b.className='ls-object-action';b.dataset.op=op;b.textContent=label;b.title=title;b.setAttribute('aria-label',title);
@@ -725,23 +720,16 @@ function measureTextHeight(o,widthPx){
   const layout=new Map();
   items.forEach(o=>{
    const g={x:Number(o.x)||0,y:Number(o.y)||0,w:Number(o.w)||.1,h:Number(o.h)||.1};
-   g.w=clamp(g.w,.025,1);
+   g.w=Math.max(.025,g.w);
    if(o.type==='text')g.h=measureTextHeight(o,g.w*canvasWidth)/Math.max(1,canvasHeight);
    else if(o.type==='image'){
     const natural=safeNatural(o),aspect=o.crop?cropAspect(o.crop,natural):(Number(o.ratio)||natural.width/natural.height);
     g.h=(g.w*canvasWidth/Math.max(.001,aspect))/Math.max(1,canvasHeight);
    }else g.h=clamp(g.h,.015,1);
 
-   g.h=clamp(g.h,.015,1);
-   const angle=(Number(o.rotation)||0)*Math.PI/180,ca=Math.abs(Math.cos(angle)),sa=Math.abs(Math.sin(angle));
-   const rotatedW=()=>g.w*canvasWidth*ca+g.h*canvasHeight*sa;
-   const rotatedH=()=>g.w*canvasWidth*sa+g.h*canvasHeight*ca;
-   const fit=Math.min(1,canvasWidth/Math.max(1,rotatedW()),canvasHeight/Math.max(1,rotatedH()));
-   if(fit<1){g.w*=fit;g.h*=fit;}
-   const boundW=rotatedW()/Math.max(1,canvasWidth),boundH=rotatedH()/Math.max(1,canvasHeight);
-   const cx=clamp(g.x+g.w/2,boundW/2,1-boundW/2);
-   const cy=clamp(g.y+g.h/2,boundH/2,1-boundH/2);
-   g.x=cx-g.w/2;g.y=cy-g.h/2;
+   g.h=Math.max(.015,g.h);
+   // Do not pull or shrink artwork back into the paper. The page's paint clip
+   // hides all pixels outside the canvas while preserving the real layer geometry.
    layout.set(o.id,g);
   });
   return layout;
