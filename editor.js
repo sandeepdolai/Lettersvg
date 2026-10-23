@@ -155,12 +155,12 @@ function chooseInkColor(){
  showPanel();
 }
 function enterDrawingMode(){
- if(!editing||!document.body.classList.contains('is-paper-fullscreen'))return;drawingMode=true;selected=null;panel.classList.remove('is-open','is-color-palette');ui.classList.remove('is-color-palette-open');setMoreMenu(false);ui.classList.add('is-drawing-mode');document.body.classList.add('is-paper-drawing-mode');
+ if(!editing||!document.body.classList.contains('is-paper-fullscreen'))return;drawingMode=true;selected=null;panel.classList.remove('is-open','is-color-palette');panel.style.transition='';ui.classList.remove('is-color-palette-open');setMoreMenu(false);ui.classList.add('is-drawing-mode');document.body.classList.add('is-paper-drawing-mode');
  const next=ui.querySelector('[data-do="next"]');if(next){next.textContent='Done';next.disabled=false;}layer.style.overflowY='hidden';layer.style.touchAction='none';layer.style.pointerEvents='auto';layer.scrollTop=0;draw();updateDrawingControls();
  requestAnimationFrame(()=>{positionLayer();layer.style.overflowY='hidden';layer.style.touchAction='none';layer.style.pointerEvents='auto';});
 }
 function exitDrawingMode(){
- if(!drawingMode)return;finishInk();drawingMode=false;panel.classList.remove('is-open','is-color-palette');ui.classList.remove('is-color-palette-open','is-drawing-mode');document.body.classList.remove('is-paper-drawing-mode');layer.style.overflowY='hidden';layer.style.overscrollBehavior='none';layer.style.touchAction='none';layer.style.pointerEvents=(editing||photoEditorMode)?'auto':'none';
+ if(!drawingMode)return;finishInk();drawingMode=false;panel.classList.remove('is-open','is-color-palette');panel.style.transition='';ui.classList.remove('is-color-palette-open','is-drawing-mode');document.body.classList.remove('is-paper-drawing-mode');layer.style.overflowY='hidden';layer.style.overscrollBehavior='none';layer.style.touchAction='none';layer.style.pointerEvents=(editing||photoEditorMode)?'auto':'none';
  const next=ui.querySelector('[data-do="next"]');if(next)next.textContent='Next';draw();histButtons();
 }
 function syncPaperSurfaceHeight(){
@@ -200,7 +200,7 @@ function syncEditorChromeToCanvas(){
  }
  if(hint)Object.assign(hint.style,{position:'absolute',top:'50%',left:'50%',right:'auto',bottom:'auto',transform:'translate(-50%,-50%)'});
  if(panel.classList.contains('is-color-palette')){
-  Object.assign(panel.style,{position:'absolute',left:'0px',right:'0px',bottom:'0px',top:'auto',width:'100%',maxWidth:'none',maxHeight:'none',transform:'translateY(0)'});
+  Object.assign(panel.style,{position:'absolute',left:'0px',right:'0px',bottom:'0px',top:'auto',width:'100%',maxWidth:'none',maxHeight:'none',transform:'translateY(0)',transition:'none'});
  }else if(panel.classList.contains('is-open')){
   Object.assign(panel.style,{position:'absolute',left:'50%',right:'auto',bottom:'92px',top:'auto',width:Math.max(0,Math.min(440,r.width-24))+'px',maxHeight:Math.max(120,Math.min(470,window.innerHeight*.49,r.height-160))+'px',transform:'translate(-50%,0)'});
  }
@@ -384,7 +384,7 @@ function openEditor(){if(!document.body.classList.contains('is-paper-fullscreen'
 function done(){editing=false;panel.classList.remove('is-open');ui.classList.remove('is-active');document.body.classList.remove('is-paper-editor-active');setMoreMenu(false);edit.classList.add('is-visible');layer.style.pointerEvents=photoEditorMode?'auto':'none';draw();}
 function setMoreMenu(open){const menu=ui.querySelector('.ls-more-menu'),button=ui.querySelector('.ls-more-button');if(menu)menu.classList.toggle('is-open',!!open);if(button)button.setAttribute('aria-expanded',open?'true':'false');}
 function showPanel(){setMoreMenu(false);panel.classList.add('is-open');}
-function hidePanel(){panel.classList.remove('is-open','is-color-palette');ui.classList.remove('is-color-palette-open');ui.querySelectorAll('[data-tool]').forEach(b=>b.classList.remove('is-active'));const add=ui.querySelector('[data-do="quick-add"]');if(add)add.classList.remove('is-active');}
+function hidePanel(){panel.classList.remove('is-open','is-color-palette');ui.classList.remove('is-color-palette-open');panel.style.transition='';ui.querySelectorAll('[data-tool]').forEach(b=>b.classList.remove('is-active'));const add=ui.querySelector('[data-do="quick-add"]');if(add)add.classList.remove('is-active');}
 function textPanel(){
  setMoreMenu(false);
  ui.querySelectorAll('[data-tool]').forEach(b=>b.classList.toggle('is-active',b.dataset.tool==='text'));
