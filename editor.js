@@ -470,7 +470,7 @@ function renderInkLayer(documentHeight){
    hitPath.setAttribute('class','ls-ink-move-target');
    hitPath.setAttribute('data-stroke-index',String(index));
    hitPath.setAttribute('stroke','transparent');
-   hitPath.setAttribute('stroke-width',String(Math.max(18,Number(stroke.width)||0+14)));
+   hitPath.setAttribute('stroke-width',String(Math.max(18,(Number(stroke.width)||0)+14)));
    hitPath.setAttribute('pointer-events','stroke');
    hitPath.style.pointerEvents='stroke';
    hitPath.style.cursor='grab';
