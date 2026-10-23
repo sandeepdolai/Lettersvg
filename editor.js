@@ -625,54 +625,91 @@ function measureTextHeight(o,widthPx){
   return Math.max(o.h*canvasHeight,lineCount*fontPx*1.22+fontPx*.35);
  }
  function photoCompositionLayout(){
-  // Compute each layer independently. No collision solving or vertical reflow:
-  // overlapping photos, text, stickers, and shapes are intentional composition.
+  // Items use normalized document coordinates against this one canvas. Keep the
+  // actual stack order independent of selection; the selection overlay is separate.
   const layout=new Map();
   items.forEach(o=>{
-   const g={x:o.x,y:o.y,w:o.w,h:o.h};
-   g.w=Math.max(.04,Math.min(1,g.w));
-   if(o.type==='text')g.h=measureTextHeight(o,g.w*canvasWidth)/canvasHeight;
-   else if(o.type==='image'&&Number.isFinite(o.ratio)&&o.ratio>0)g.h=(g.w*canvasWidth/o.ratio)/canvasHeight;
-   else g.h=Math.max(.012,g.h);
-   g.h=Math.max(.012,Math.min(1,g.h));
-   g.x=Math.max(0,Math.min(1-g.w,g.x));
-   g.y=Math.max(0,Math.min(1-g.h,g.y));
+   const g={x:Number(o.x)||0,y:Number(o.y)||0,w:Number(o.w)||.1,h:Number(o.h)||.1};
+   g.w=clamp(g.w,.025,1);
+   if(o.type==='text')g.h=measureTextHeight(o,g.w*canvasWidth)/Math.max(1,canvasHeight);
+   else if(o.type==='image'){
+    const natural=safeNatural(o),aspect=o.crop?cropAspect(o.crop,natural):(Number(o.ratio)||natural.width/natural.height);
+    g.h=(g.w*canvasWidth/Math.max(.001,aspect))/Math.max(1,canvasHeight);
+   }else g.h=clamp(g.h,.015,1);
+
+   g.h=clamp(g.h,.015,1);
+   const angle=(Number(o.rotation)||0)*Math.PI/180,ca=Math.abs(Math.cos(angle)),sa=Math.abs(Math.sin(angle));
+   const rotatedW=()=>g.w*canvasWidth*ca+g.h*canvasHeight*sa;
+   const rotatedH=()=>g.w*canvasWidth*sa+g.h*canvasHeight*ca;
+   const fit=Math.min(1,canvasWidth/Math.max(1,rotatedW()),canvasHeight/Math.max(1,rotatedH()));
+   if(fit<1){g.w*=fit;g.h*=fit;}
+   const boundW=rotatedW()/Math.max(1,canvasWidth),boundH=rotatedH()/Math.max(1,canvasHeight);
+   const cx=clamp(g.x+g.w/2,boundW/2,1-boundW/2);
+   const cy=clamp(g.y+g.h/2,boundH/2,1-boundH/2);
+   g.x=cx-g.w/2;g.y=cy-g.h/2;
    layout.set(o.id,g);
   });
   return layout;
  }
-
+ function renderSelectionOverlay(o,g){
+  const frame=document.createElement('div');frame.className='ls-selection-frame';frame.dataset.selectionId=String(o.id);
+  Object.assign(frame.style,{left:(g.x*canvasWidth)+'px',top:(g.y*canvasHeight)+'px',width:(g.w*canvasWidth)+'px',height:(g.h*canvasHeight)+'px',transform:'rotate('+o.rotation+'deg)',zIndex:'2147483000'});
+  const bar=document.createElement('div');bar.className='ls-object-actions';
+  bar.style.transform='rotate('+(-Number(o.rotation||0))+'deg)';
+  bar.style.top=(g.y*canvasHeight>52?'-42px':'3px');
+  bar.append(actionButton('rotate','↻','Rotate 15 degrees',o));
+  if(o.type==='image'){
+   bar.append(actionButton('crop','Crop','Crop image',o));
+   bar.append(actionButton('fit',o.fit==='cover'?'Fit':'Fill',o.fit==='cover'?'Fit entire image':'Fill image frame',o));
+  }
+  bar.append(actionButton('duplicate','＋','Duplicate layer',o));
+  bar.append(actionButton('delete','×','Delete layer',o));
+  frame.append(bar);
+  const rotate=document.createElement('button');rotate.type='button';rotate.className='ls-rotate-handle';rotate.setAttribute('aria-label','Rotate selected layer by dragging');rotate.title='Drag to rotate';
+  rotate.addEventListener('pointerdown',e=>startDrag(e,o,'rotate'));rotate.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();});
+  frame.append(rotate);
+  const grip=document.createElement('button');grip.type='button';grip.className='ls-resize-handle';grip.setAttribute('aria-label','Resize selected layer');grip.addEventListener('pointerdown',e=>startDrag(e,o,'resize'));grip.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();});
+  frame.append(grip);page.append(frame);
+ }
  function draw(){
   layoutGeometry=photoCompositionLayout();
   page.replaceChildren();
   items.forEach((o,i)=>{
-  const g=layoutGeometry.get(o.id)||o;
-  const el=document.createElement('div');el.className='ls-object ls-object-'+o.type+(o.id===selected&&editing?' is-selected':'');el.dataset.id=String(o.id);
-  Object.assign(el.style,{left:(g.x*canvasWidth)+'px',top:(g.y*canvasHeight)+'px',width:(g.w*canvasWidth)+'px',height:(g.h*canvasHeight)+'px',transform:'rotate('+o.rotation+'deg)',zIndex:String(o.id===selected?2000:i+1)});
-  if(o.type==='text'||o.type==='sticker'){
-   const c=document.createElement('div');c.className='ls-object-copy'+(o.type==='sticker'?' ls-sticker-copy':'');c.textContent=o.value;
-   Object.assign(c.style,{color:o.color,fontFamily:o.font,fontSize:(o.size*contentScale)+'px',fontWeight:o.bold?'700':'400',fontStyle:o.italic?'italic':'normal',textAlign:o.align,justifyContent:'center',margin:'0'});
-   el.append(c);
-  }else if(o.type==='image'){const img=document.createElement('img');img.className='ls-object-photo';img.src=o.src;img.alt='Image on page';img.draggable=false;img.style.objectFit=o.fit;el.append(img);}
-  else if(o.type==='shape'){const sh=document.createElement('div');sh.className='ls-shape ls-shape-'+o.shape;sh.style.setProperty('--ls-shape-color',o.color);const stroke=(o.shape==='circle'||o.shape==='corner')?3*contentScale:2*contentScale;sh.style.borderWidth=stroke+'px';if(o.shape==='frame'||o.shape==='corner')sh.style.borderRadius=(3*contentScale)+'px';el.append(sh);}
-  el.addEventListener('pointerdown',e=>{if(e.target.closest('.ls-object-action')||e.target.closest('.ls-resize-handle'))return;startDrag(e,o,'move');});
-  el.addEventListener('click',e=>{e.stopPropagation();if(editing&&selected!==o.id){selected=o.id;draw();}});
-  if(o.id===selected&&editing){
-   const bar=document.createElement('div');bar.className='ls-object-actions';bar.append(actionButton('rotate','↻','Rotate',o));
-   if(o.type==='image')bar.append(actionButton('fit',o.fit==='cover'?'Fit':'Crop',o.fit==='cover'?'Fit entire image':'Fill frame',o));
-   bar.append(actionButton('delete','×','Delete',o));el.append(bar);
-   const grip=document.createElement('button');grip.type='button';grip.className='ls-resize-handle';grip.setAttribute('aria-label','Resize selected object');grip.addEventListener('pointerdown',e=>startDrag(e,o,'resize'));grip.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();});el.append(grip);
+   if(o.visible===false)return;
+   const g=layoutGeometry.get(o.id)||o;
+   const el=document.createElement('div');el.className='ls-object ls-object-'+o.type+(o.id===selected&&editing?' is-selected':'')+(o.locked?' is-locked':'');el.dataset.id=String(o.id);
+   Object.assign(el.style,{left:(g.x*canvasWidth)+'px',top:(g.y*canvasHeight)+'px',width:(g.w*canvasWidth)+'px',height:(g.h*canvasHeight)+'px',transform:'rotate('+o.rotation+'deg)',zIndex:String(i+1),opacity:String(clamp(Number(o.opacity==null?1:o.opacity),0,1)),overflow:o.type==='image'&&o.crop?'hidden':'visible'});
+   if(o.type==='text'||o.type==='sticker'){
+    const c=document.createElement('div');c.className='ls-object-copy'+(o.type==='sticker'?' ls-sticker-copy':'');c.textContent=o.value;
+    Object.assign(c.style,{color:o.color,fontFamily:o.font,fontSize:(o.size*contentScale)+'px',fontWeight:o.bold?'700':'400',fontStyle:o.italic?'italic':'normal',textAlign:o.align,justifyContent:'center',margin:'0'});
+    el.append(c);
+   }else if(o.type==='image'){
+    const img=document.createElement('img');img.className='ls-object-photo';img.src=o.src;img.alt='Image on page';img.draggable=false;
+    if(o.crop&&o.natural){
+     const geo=cropImageStyle(o.crop,o.natural);
+     Object.assign(img.style,{position:'absolute',left:geo.left+'%',top:geo.top+'%',width:geo.width+'%',height:geo.height+'%',maxWidth:'none',maxHeight:'none',objectFit:'fill',transform:'rotate('+geo.rotate+'deg)',transformOrigin:'center center',display:'block'});
+    }else Object.assign(img.style,{width:'100%',height:'100%',objectFit:o.fit||'contain',display:'block'});
+    el.append(img);
+   }else if(o.type==='shape'){
+    const sh=document.createElement('div');sh.className='ls-shape ls-shape-'+o.shape;sh.style.setProperty('--ls-shape-color',o.color);const stroke=(o.shape==='circle'||o.shape==='corner')?3*contentScale:2*contentScale;sh.style.borderWidth=stroke+'px';if(o.shape==='frame'||o.shape==='corner')sh.style.borderRadius=(3*contentScale)+'px';el.append(sh);
+   }
+   el.addEventListener('pointerdown',e=>{
+    if(!editing||e.target.closest('.ls-object-action')||e.target.closest('.ls-resize-handle')||e.target.closest('.ls-rotate-handle'))return;
+    startDrag(e,o,'move');
+   });
+   page.append(el);
+  });
+  // One fixed-size page: drawing and objects share the exact same normalized canvas.
+  const documentHeight=canvasHeight;
+  page.style.height=documentHeight+'px';page.style.minHeight=documentHeight+'px';
+  renderInkLayer(documentHeight);
+  const selectedObject=chosen();
+  if(editing&&!drawingMode&&selectedObject&&selectedObject.visible!==false){
+   const g=layoutGeometry.get(selectedObject.id)||selectedObject;
+   renderSelectionOverlay(selectedObject,g);
   }
-  page.append(el);
- });
- // The paper is a fixed-size composition surface, never an expanding webpage.
- const documentHeight=canvasHeight;
- page.style.height=documentHeight+'px';
- page.style.minHeight=documentHeight+'px';
- renderInkLayer(documentHeight);
- syncPaperSurfaceHeight();
- histButtons();
-}
+  syncPaperSurfaceHeight();histButtons();
+ }
 
 inkLayer.addEventListener('pointerdown',startInk);
 const brushSizeControl=ui.querySelector('.ls-brush-size-control');
