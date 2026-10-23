@@ -776,3 +776,15 @@ body.is-paper-drawing-mode .ls-ink-layer {
 /* Interactive surfaces must opt back in because the editor shell itself is click-through. */
 .ls-more-menu, .ls-more-menu button, .ls-crop-overlay { pointer-events: auto; }
 .ls-editor-shell.is-crop-mode { pointer-events: auto; }
+
+.ls-layer-properties {
+ display:grid;gap:12px;margin-top:10px;padding:12px;
+ border:1px solid #eee5df;border-radius:13px;background:#fbf8f5;
+}
+.ls-layer-properties-heading { display:grid;gap:3px;min-width:0; }
+.ls-layer-properties-heading strong { color:#3a302b;font-size:11px;font-weight:700; }
+.ls-layer-properties-heading span { overflow:hidden;color:#897e77;font-size:10px;text-overflow:ellipsis;white-space:nowrap; }
+.ls-layer-range { display:grid;gap:6px;min-width:0;color:#756a64;font-size:10px; }
+.ls-layer-range>span { display:flex;align-items:center;justify-content:space-between;gap:8px; }
+.ls-layer-range output { color:#39312c;font-size:10px;font-variant-numeric:tabular-nums; }
+.ls-layer-range input { width:100%;min-width:0;height:24px;margin:0;accent-color:#a92f2b;cursor:pointer; }
