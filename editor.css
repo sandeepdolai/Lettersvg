@@ -766,3 +766,9 @@ body.is-paper-drawing-mode .ls-ink-layer {
  .ls-crop-actions button { padding:0 4px;font-size:10px!important; }
  .ls-crop-workspace { bottom:calc(166px + env(safe-area-inset-bottom)); }
 }
+
+/* Selection is rendered by its own measured overlay; avoid a second outline on the layer itself. */
+.ls-object.is-selected { outline: none !important; outline-offset: 0; }
+.ls-selection-frame .ls-object-actions { transform-origin: top right; }
+.ls-layer-actions button:focus-visible,
+.ls-crop-overlay button:focus-visible { outline: 2px solid #a92f2b; outline-offset: 2px; }
