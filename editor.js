@@ -852,14 +852,40 @@ file.addEventListener('change',()=>{
  });
 });
 function libraryPanel(which){
- tab=which||tab;ui.querySelectorAll('[data-tool]').forEach(b=>b.classList.toggle('is-active',b.dataset.tool==='library'));
- let html='<div class="ls-panel-header"><div><h3>Library</h3><p>Little details to finish your letter</p></div><button class="ls-panel-close" data-do="close-panel" aria-label="Close panel">×</button></div><div class="ls-library-tabs">';
- [['stickers','Stickers'],['elements','Elements'],['layouts','Layouts']].forEach(t=>html+='<button data-lib-tab="'+t[0]+'" class="'+(tab===t[0]?'is-active':'')+'">'+t[1]+'</button>');
- html+='</div><div class="ls-library-grid">';
- if(tab==='stickers')[['heart','♥','Heart'],['sparkle','✦','Sparkle'],['flower','✿','Flower'],['star','★','Star'],['outline-heart','♡','Outline heart'],['smile','☺','Smiley'],['moon','☾','Moon'],['music','♫','Music'],['infinity','∞','Infinity'],['flower-two','❀','Blossom']].forEach(e=>html+='<button class="ls-library-tile" data-lib-add="'+e[0]+'"><span class="ls-library-symbol">'+e[1]+'</span><span>'+e[2]+'</span></button>');
- else if(tab==='elements')[['frame','▢','Frame'],['circle','◯','Circle'],['line','―','Line'],['dot','●','Dot'],['corner','⌜','Corner'],['ribbon','〰','Wave'],['diamond','◇','Diamond'],['leaf','❧','Leaf']].forEach(e=>html+='<button class="ls-library-tile" data-lib-add="'+e[0]+'"><span class="ls-library-symbol">'+e[1]+'</span><span>'+e[2]+'</span></button>');
- else [['love-note','Love note','A warm message with a signature'],['photo-caption','Photo & caption','A picture frame and a short message'],['minimal','Minimal note','A heading with quiet text']].forEach(e=>html+='<button class="ls-layout-tile" data-lib-add="'+e[0]+'"><span class="ls-layout-miniature '+e[0]+'"><i></i><i></i><i></i></span><strong>'+e[1]+'</strong><span>'+e[2]+'</span></button>');
- panel.innerHTML=html+'</div>';showPanel();
+ tab=which||tab;
+ ui.querySelectorAll('[data-tool]').forEach(b=>b.classList.toggle('is-active',b.dataset.tool==='library'));
+ let html='<div class="ls-panel-header"><div><h3>Explore ideas</h3><p>Choose a detail to add to your letter</p></div><button class="ls-panel-close" data-do="close-panel" aria-label="Close panel">×</button></div><div class="ls-library-tabs" role="tablist" aria-label="Explore assets">';
+ [['stickers','Stickers'],['elements','Elements'],['layouts','Layouts']].forEach(t=>{
+  html+='<button type="button" role="tab" aria-selected="'+(tab===t[0]?'true':'false')+'" data-lib-tab="'+t[0]+'" class="'+(tab===t[0]?'is-active':'')+'">'+t[1]+'</button>';
+ });
+ html+='</div><div class="ls-library-grid ls-pin-grid" data-library-kind="'+tab+'">';
+ const addCard=(key,symbol,label,look,kind)=> {
+  html+='<button type="button" class="ls-library-tile ls-pin-card" data-lib-add="'+key+'" data-pin-look="'+look+'" aria-label="Add '+label+(kind==='elements'?' element':' sticker')+'"><span class="ls-pin-art" aria-hidden="true"><span class="ls-library-symbol">'+symbol+'</span></span><span class="ls-pin-title">'+label+'</span><span class="ls-pin-add" aria-hidden="true">+</span></button>';
+ };
+ if(tab==='stickers'){
+  [
+   ['heart','♥','Heart','blush'],['sparkle','✦','Sparkle','butter'],['flower','✿','Flower','rose'],
+   ['star','★','Star','cream'],['outline-heart','♡','Outline heart','lilac'],
+   ['smile','☺','Smiley','mint'],['moon','☾','Moon','night'],
+   ['music','♫','Music','sage'],['infinity','∞','Infinity','peach'],['flower-two','❀','Blossom','sky']
+  ].forEach(e=>addCard(e[0],e[1],e[2],e[3],'stickers'));
+ } else if(tab==='elements'){
+  [
+   ['frame','▢','Frame','cream'],['circle','◯','Circle','lilac'],['line','―','Line','sage'],
+   ['dot','●','Dot','blush'],['corner','⌜','Corner','sky'],['ribbon','〰','Wave','rose'],
+   ['diamond','◇','Diamond','butter'],['leaf','❧','Leaf','mint']
+  ].forEach(e=>addCard(e[0],e[1],e[2],e[3],'elements'));
+ } else {
+  [
+   ['love-note','Love note','A warm message with a signature','layout-love'],
+   ['photo-caption','Photo & caption','A frame with an editorial caption','layout-photo'],
+   ['minimal','Minimal note','A heading with quiet supporting text','layout-minimal']
+  ].forEach(e=>{
+   html+='<button type="button" class="ls-layout-tile ls-pin-layout" data-lib-add="'+e[0]+'" aria-label="Add '+e[1]+' layout"><span class="ls-layout-miniature '+e[0]+' '+e[3]+'" aria-hidden="true"><i></i><i></i><i></i></span><span class="ls-pin-layout-copy"><strong>'+e[1]+'</strong><span>'+e[2]+'</span></span><span class="ls-pin-add" aria-hidden="true">+</span></button>';
+  });
+ }
+ panel.innerHTML=html+'</div>';
+ showPanel();
 }
 function libraryAdd(name){
  if(['love-note','photo-caption','minimal'].includes(name)){
