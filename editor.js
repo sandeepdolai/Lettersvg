@@ -169,20 +169,50 @@ function resetPaperSurfaceHeight(){
  paperShadow.setAttribute('height',String(originalShadowHeight));
 }
 function syncEditorChromeToCanvas(){
- const r=layer.getBoundingClientRect();
- if(!r.width||!r.height)return;
- const right=Math.max(0,window.innerWidth-r.right);
- const bottom=Math.max(0,window.innerHeight-r.bottom);
  const topbar=ui.querySelector('.ls-editor-topbar');
  const dock=ui.querySelector('.ls-editor-dock');
  const drawingDock=ui.querySelector('.ls-drawing-dock');
  const slider=ui.querySelector('.ls-brush-size-control');
- if(topbar){topbar.style.top=(r.top+10)+'px';topbar.style.left=(r.left+12)+'px';topbar.style.right=(right+12)+'px';}
- if(dock){dock.style.bottom=(bottom+12)+'px';dock.style.left=(r.left+r.width/2)+'px';dock.style.width=Math.max(0,r.width-24)+'px';}
- if(drawingDock){drawingDock.style.left=(r.left+12)+'px';drawingDock.style.right=(right+12)+'px';drawingDock.style.bottom=(bottom+4)+'px';drawingDock.style.height=Math.min(132,Math.max(92,r.height*.18))+'px';}
- if(slider){slider.style.top=(r.top+Math.max(100,r.height*.3))+'px';slider.style.right=right+'px';slider.style.height=Math.max(120,Math.min(300,r.height*.42))+'px';}
- if(panel.classList.contains('is-color-palette')){panel.style.left=r.left+'px';panel.style.right=right+'px';panel.style.bottom=bottom+'px';}
- else if(panel.classList.contains('is-open')){panel.style.left=(r.left+r.width/2)+'px';panel.style.bottom=(bottom+96)+'px';}
+
+ // Toolbars belong to the screen edges, not the top/bottom of the centered 16:9
+ // canvas. This keeps the canvas between the top controls and the bottom tools.
+ if(topbar)Object.assign(topbar.style,{
+  position:'fixed',top:'max(10px, env(safe-area-inset-top))',
+  left:'max(12px, env(safe-area-inset-left))',
+  right:'max(12px, env(safe-area-inset-right))',bottom:'auto',width:'auto'
+ });
+ if(dock)Object.assign(dock.style,{
+  position:'fixed',left:'50%',right:'auto',
+  bottom:'calc(10px + env(safe-area-inset-bottom))',
+  width:'min(420px, calc(100vw - 22px))',
+  transform:'translateX(-50%)'
+ });
+ if(drawingDock)Object.assign(drawingDock.style,{
+  position:'fixed',left:'max(12px, env(safe-area-inset-left))',
+  right:'max(12px, env(safe-area-inset-right))',
+  bottom:'calc(4px + env(safe-area-inset-bottom))',
+  height:'132px'
+ });
+ if(slider)Object.assign(slider.style,{
+  position:'fixed',top:'auto',right:'max(12px, env(safe-area-inset-right))',
+  bottom:'calc(142px + env(safe-area-inset-bottom))',
+  height:'min(220px, 28dvh)'
+ });
+
+ if(panel.classList.contains('is-color-palette')){
+  Object.assign(panel.style,{
+   position:'fixed',left:'0',right:'0',top:'auto',
+   bottom:'env(safe-area-inset-bottom)',width:'100%',maxWidth:'none',
+   maxHeight:'none',transform:'translateY(0)',transition:'none'
+  });
+ } else if(panel.classList.contains('is-open')){
+  Object.assign(panel.style,{
+   position:'fixed',left:'50%',right:'auto',top:'auto',
+   bottom:'calc(94px + env(safe-area-inset-bottom))',
+   width:'min(440px, calc(100vw - 24px))',
+   maxHeight:'min(49dvh, 470px)',transform:'translate(-50%,0)'
+  });
+ }
 }
 function positionLayer(){
  const fullscreen=document.body.classList.contains('is-paper-fullscreen');
