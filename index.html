@@ -314,70 +314,6 @@
       outline: 2px solid #9a332e;
       outline-offset: 3px;
     }
-    /* Menu item is larger, left-aligned, and anchored to the Edit control. */
-    .paper-fullscreen-text {
-      position: fixed;
-      z-index: 2147483647;
-      top: calc(max(16px, env(safe-area-inset-top)) + 52px);
-      right: calc(max(16px, env(safe-area-inset-right)) + 52px);
-      display: grid;
-      gap: 3px;
-      width: min(196px, calc(100vw - 24px));
-      padding: 6px;
-      border: 1px solid rgba(60, 60, 67, .14);
-      border-radius: 16px;
-      background: rgba(255, 255, 255, .96);
-      color: #242326;
-      box-shadow: 0 4px 14px rgba(24, 22, 22, .08), 0 14px 36px rgba(24, 22, 22, .09);
-      -webkit-backdrop-filter: saturate(180%) blur(20px);
-      backdrop-filter: saturate(180%) blur(20px);
-      opacity: 0;
-      visibility: hidden;
-      pointer-events: none;
-      transform: translateY(-5px) scale(.98);
-      transform-origin: top right;
-      transition: opacity 160ms ease, transform 200ms cubic-bezier(.2, .8, .2, 1), visibility 0s 200ms;
-    }
-    .paper-fullscreen-text .paper-fullscreen-menu-action {
-      display: flex;
-      align-items: center;
-      gap: 11px;
-      width: 100%;
-      min-height: 44px;
-      padding: 9px 10px;
-      border: 0;
-      border-radius: 10px;
-      background: transparent;
-      color: #242326;
-      font: 550 14px/1.2 ui-rounded, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      text-align: left;
-      cursor: pointer;
-      -webkit-tap-highlight-color: transparent;
-    }
-    .paper-fullscreen-text .paper-fullscreen-menu-action:hover {
-      background: rgba(169, 47, 43, .08);
-    }
-    .paper-fullscreen-text .paper-fullscreen-menu-action:active {
-      background: rgba(169, 47, 43, .13);
-    }
-    .paper-fullscreen-text svg {
-      display: block;
-      width: 20px;
-      height: 20px;
-      flex: 0 0 auto;
-      color: #6b6666;
-    }
-    .paper-fullscreen-text.is-visible {
-      opacity: 1;
-      visibility: visible;
-      pointer-events: auto;
-      transform: translateY(0) scale(1);
-      transition: opacity 160ms ease, transform 200ms cubic-bezier(.2, .8, .2, 1), visibility 0s;
-    }
-    .paper-fullscreen-text .paper-fullscreen-menu-action:focus-visible {
-      outline: 2px solid #9a332e;
-      outline-offset: 1px;
-    }
     /* The text editor is aligned to the real paper rectangle, not the viewport. */
     .envelope-control.is-open .letter-paper {
       cursor: zoom-in;
@@ -515,34 +451,12 @@
     <div class="paper-fullscreen-backdrop" aria-hidden="true"></div>
     <svg class="fullscreen-art" id="fullscreen-art" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 390 844" preserveAspectRatio="none" aria-label="The same blank letter paper expanded to full screen"></svg>
   </div>
-  <button class="paper-fullscreen-edit" id="paper-fullscreen-edit" type="button" aria-label="Edit options" aria-expanded="false" aria-controls="paper-fullscreen-text" title="Edit options">
+  <button class="paper-fullscreen-edit" id="paper-fullscreen-edit" type="button" aria-label="Edit photo canvas" title="Edit">
     <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" focusable="false">
       <path d="M11.9 4.1 15.9 8.1M3.4 16.6l3.9-.8L16.1 7a1.7 1.7 0 0 0-2.4-2.4L4.9 13.4l-1.5 3.2Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>
     <span id="paper-fullscreen-edit-label">Edit</span>
   </button>
-  <div class="paper-fullscreen-text" id="paper-fullscreen-text" role="group" aria-label="Edit options">
-    <button class="paper-fullscreen-menu-action" type="button" data-fullscreen-action="text">
-      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
-        <path d="M4.5 6.5h15M12 6.5v11M8.5 17.5h7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-      <span>Text</span>
-    </button>
-    <button class="paper-fullscreen-menu-action" type="button" data-fullscreen-action="photo">
-      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
-        <rect x="3.5" y="4.5" width="17" height="15" rx="2.5" stroke="currentColor" stroke-width="1.5"/>
-        <circle cx="9" cy="9.5" r="1.7" stroke="currentColor" stroke-width="1.5"/>
-        <path d="m5 17 5.2-4.8 3.1 2.7 2.4-2 3.3 3.1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-      <span>Add Photo</span>
-    </button>
-    <button class="paper-fullscreen-menu-action" type="button" data-fullscreen-action="library">
-      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
-        <path d="m12 3 2.6 5.3L20.5 9l-4.3 4.2 1 5.9-5.2-2.8-5.2 2.8 1-5.9L3.5 9l5.9-.7L12 3Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
-      </svg>
-      <span>Library</span>
-    </button>
-  </div>
   <button class="paper-fullscreen-close" id="paper-fullscreen-close" type="button" aria-label="Return to the envelope" title="Back to envelope">
     <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" focusable="false">
       <path d="M5 5L15 15M15 5L5 15" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
@@ -582,7 +496,6 @@
       const fullscreenArt = document.getElementById('fullscreen-art');
       const fullscreenClose = document.getElementById('paper-fullscreen-close');
       const fullscreenEdit = document.getElementById('paper-fullscreen-edit');
-      const fullscreenText = document.getElementById('paper-fullscreen-text');
       let isPaperFullscreen = false;
       let fullscreenAnimating = false;
       let previousBodyOverflow = "";
@@ -790,7 +703,6 @@
         fullscreenClose.style.display = 'grid';
         fullscreenClose.classList.add('is-visible');
         fullscreenEdit.classList.add('is-visible');
-        fullscreenText.classList.remove('is-visible');
         fullscreenEdit.setAttribute('aria-expanded', 'false');
 
         // Reparent the original paper node. The explicit animation below guarantees
@@ -813,7 +725,6 @@
         fullscreenAnimating = true;
         fullscreenClose.classList.remove('is-visible');
         fullscreenEdit.classList.remove('is-visible');
-        fullscreenText.classList.remove('is-visible');
         fullscreenEdit.setAttribute('aria-expanded', 'false');
 
         // Preserve the original close motion: travel up to the envelope's raised
@@ -918,14 +829,6 @@
         openPaperFullscreen();
       });
       fullscreenClose.addEventListener('click', closePaperFullscreen);
-      fullscreenEdit.setAttribute('aria-expanded', 'false');
-      fullscreenEdit.setAttribute('aria-controls', 'paper-fullscreen-text');
-      fullscreenEdit.addEventListener('click', () => {
-        if (!isPaperFullscreen) return;
-        const expanded = fullscreenEdit.getAttribute('aria-expanded') === 'true';
-        fullscreenEdit.setAttribute('aria-expanded', String(!expanded));
-        fullscreenText.classList.toggle('is-visible', !expanded);
-      });
       // Touching the blank full-screen page should not dismiss it by accident.
       // Only the close control or Escape returns to the envelope.
       paperFullscreen.addEventListener('click', (event) => {
@@ -938,14 +841,7 @@
         if (!fullscreenAnimating) setPaperTransformForRect(targetRect);
       });
       document.addEventListener('keydown', (event) => {
-        if (event.key !== 'Escape' || !isPaperFullscreen) return;
-        if (fullscreenText.classList.contains('is-visible')) {
-          fullscreenText.classList.remove('is-visible');
-          fullscreenEdit.setAttribute('aria-expanded', 'false');
-          fullscreenEdit.focus({ preventScroll: true });
-          return;
-        }
-        closePaperFullscreen();
+        if (event.key === 'Escape' && isPaperFullscreen) closePaperFullscreen();
       });
 
       control.addEventListener('click', (event) => {
