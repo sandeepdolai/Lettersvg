@@ -430,6 +430,9 @@ function renderInkLayer(documentHeight){
  const clippedInk=document.createElementNS(svgNS,'g');
  clippedInk.setAttribute('class','ls-visible-ink');
  clippedInk.setAttribute('clip-path','url(#lettersvg-ink-paper-clip)');
+ const moveTargets=document.createElementNS(svgNS,'g');
+ moveTargets.setAttribute('class','ls-ink-move-targets');
+ moveTargets.setAttribute('clip-path','url(#lettersvg-ink-paper-clip)');
 
  strokes.forEach((stroke,index)=>{
   // Eraser paths only mask strokes that were drawn before them. Later drawing
@@ -475,10 +478,10 @@ function renderInkLayer(documentHeight){
    hitPath.style.pointerEvents='stroke';
    hitPath.style.cursor='grab';
    hitPath.style.touchAction='none';
-   clippedInk.append(hitPath);
+   moveTargets.append(hitPath);
   }
  });
- inkLayer.append(defs,clippedInk);
+ inkLayer.append(defs,clippedInk,moveTargets);
  Object.assign(inkLayer.style,{pointerEvents:(drawingMode||editing)?'auto':'none',touchAction:'none'});
  page.append(inkLayer);updateDrawingControls();
 }
