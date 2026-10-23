@@ -11,7 +11,21 @@ async function openRealPaper(page) {
     position: { x: bounds.width * 0.5, y: bounds.height * 0.31 }
   });
   await expect(envelope).toHaveClass(/is-open/);
-  await page.locator("#paper-surface").click();
+  // The open class is applied before the paper's CSS transition completes.
+  // Wait on the real SVG group so this click lands on the revealed sheet, not
+  // the envelope underneath it.
+  await page.locator("#letter-paper").evaluate(el => new Promise(resolve => {
+    let timer;
+    const finish = event => {
+      if (event && (event.target !== el || event.propertyName !== "transform")) return;
+      el.removeEventListener("transitionend", finish);
+      window.clearTimeout(timer);
+      resolve();
+    };
+    el.addEventListener("transitionend", finish);
+    timer = window.setTimeout(() => finish(), 1_500);
+  }));
+  await page.locator("#letter-paper").click();
   await expect(page.locator("body")).toHaveClass(/is-paper-fullscreen/);
   await expect(page.locator("#letter-paper")).toHaveCount(1);
   // Don't test an intermediate animation frame: wait until the real embedded
