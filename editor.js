@@ -16,6 +16,7 @@ ui.insertAdjacentHTML('beforeend','<div class="ls-canvas-hint" role="note"><span
 const panel=ui.querySelector('.ls-editor-panel'),file=document.createElement('input');
 const svgNS='http://www.w3.org/2000/svg';
 const inkLayer=document.createElementNS(svgNS,'svg');
+let inkContentGroup=null;
 inkLayer.setAttribute('class','ls-ink-layer');
 inkLayer.setAttribute('aria-label','Freehand drawing');
 inkLayer.setAttribute('preserveAspectRatio','none');
@@ -121,6 +122,7 @@ function renderInkLayer(documentHeight){
  clippedInk.setAttribute('clip-path','url(#lettersvg-ink-paper-clip)');
  strokes.forEach(stroke=>clippedInk.append(makeInkPath(stroke)));
  inkLayer.append(clippedInk);
+ inkContentGroup=clippedInk;
  Object.assign(inkLayer.style,{pointerEvents:drawingMode?'auto':'none',touchAction:'none'});
  page.append(inkLayer);updateDrawingControls();
 }
@@ -130,7 +132,7 @@ function inkPointFromEvent(e){
 }
 function startInk(e){
  if(!drawingMode||(e.button!==0&&e.pointerType==='mouse'))return;e.preventDefault();e.stopPropagation();
- const p=inkPointFromEvent(e),erasing=selectedBrush==='eraser';activeStroke={color:erasing?'#f7f7f7':drawColor,width:Math.round((brushWidths[selectedBrush]||4)*(brushSize/24)*10)/10,brush:selectedBrush,brushSize,points:[p]};strokes.push(activeStroke);activeStrokePath=makeInkPath(activeStroke);inkLayer.append(activeStrokePath);activePointerId=e.pointerId;try{inkLayer.setPointerCapture(e.pointerId);}catch(_){}updateDrawingControls();
+ const p=inkPointFromEvent(e),erasing=selectedBrush==='eraser';activeStroke={color:erasing?'#f7f7f7':drawColor,width:Math.round((brushWidths[selectedBrush]||4)*(brushSize/24)*10)/10,brush:selectedBrush,brushSize,points:[p]};strokes.push(activeStroke);activeStrokePath=makeInkPath(activeStroke);(inkContentGroup||inkLayer).append(activeStrokePath);activePointerId=e.pointerId;try{inkLayer.setPointerCapture(e.pointerId);}catch(_){}updateDrawingControls();
 }
 function moveInk(e){
  if(!drawingMode||!activeStroke||e.pointerId!==activePointerId)return;e.preventDefault();const p=inkPointFromEvent(e),last=activeStroke.points[activeStroke.points.length-1],dx=p.x-last.x,dy=p.y-last.y;if(dx*dx+dy*dy<0.000002)return;activeStroke.points.push(p);activeStrokePath.setAttribute('d',strokePathData(activeStroke));
@@ -171,18 +173,34 @@ function resetPaperSurfaceHeight(){
 function syncEditorChromeToCanvas(){
  const r=layer.getBoundingClientRect();
  if(!r.width||!r.height)return;
- const right=Math.max(0,window.innerWidth-r.right);
- const bottom=Math.max(0,window.innerHeight-r.bottom);
+
+ // Size the entire existing editor overlay to the actual paper rectangle. Its
+ // controls then use local coordinates and cannot escape into the page margins.
+ Object.assign(ui.style,{
+  position:'fixed',inset:'auto',top:r.top+'px',left:r.left+'px',
+  right:'auto',bottom:'auto',width:r.width+'px',height:r.height+'px',
+  overflow:'hidden',borderRadius:'34px',clipPath:'inset(0 round 34px)'
+ });
+
  const topbar=ui.querySelector('.ls-editor-topbar');
  const dock=ui.querySelector('.ls-editor-dock');
  const drawingDock=ui.querySelector('.ls-drawing-dock');
  const slider=ui.querySelector('.ls-brush-size-control');
- if(topbar){topbar.style.top=(r.top+10)+'px';topbar.style.left=(r.left+12)+'px';topbar.style.right=(right+12)+'px';}
- if(dock){dock.style.bottom=(bottom+12)+'px';dock.style.left=(r.left+r.width/2)+'px';dock.style.width=Math.max(0,r.width-24)+'px';}
- if(drawingDock){drawingDock.style.left=(r.left+12)+'px';drawingDock.style.right=(right+12)+'px';drawingDock.style.bottom=(bottom+4)+'px';drawingDock.style.height=Math.min(132,Math.max(92,r.height*.18))+'px';}
- if(slider){slider.style.top=(r.top+Math.max(100,r.height*.3))+'px';slider.style.right=right+'px';slider.style.height=Math.max(120,Math.min(300,r.height*.42))+'px';}
- if(panel.classList.contains('is-color-palette')){panel.style.left=r.left+'px';panel.style.right=right+'px';panel.style.bottom=bottom+'px';}
- else if(panel.classList.contains('is-open')){panel.style.left=(r.left+r.width/2)+'px';panel.style.bottom=(bottom+96)+'px';}
+ const hint=ui.querySelector('.ls-canvas-hint');
+
+ if(topbar)Object.assign(topbar.style,{position:'absolute',top:'10px',left:'12px',right:'12px',bottom:'auto',width:'auto'});
+ if(dock)Object.assign(dock.style,{position:'absolute',left:'50%',right:'auto',bottom:'12px',width:Math.max(0,Math.min(420,r.width-24))+'px',transform:'translateX(-50%)'});
+ if(drawingDock)Object.assign(drawingDock.style,{position:'absolute',left:'12px',right:'12px',bottom:'4px',height:Math.min(132,Math.max(82,r.height*.18))+'px'});
+ if(slider){
+  const sliderHeight=Math.min(300,Math.max(120,r.height*.42));
+  Object.assign(slider.style,{position:'absolute',top:Math.min(Math.max(88,r.height*.3),Math.max(76,r.height-sliderHeight-78))+'px',right:'30px',bottom:'auto',height:sliderHeight+'px'});
+ }
+ if(hint)Object.assign(hint.style,{position:'absolute',top:'50%',left:'50%',right:'auto',bottom:'auto',transform:'translate(-50%,-50%)'});
+ if(panel.classList.contains('is-color-palette')){
+  Object.assign(panel.style,{position:'absolute',left:'0px',right:'0px',bottom:'0px',top:'auto',width:'100%',maxWidth:'none',maxHeight:'none',transform:'translateY(0)'});
+ }else if(panel.classList.contains('is-open')){
+  Object.assign(panel.style,{position:'absolute',left:'50%',right:'auto',bottom:'92px',top:'auto',width:Math.max(0,Math.min(440,r.width-24))+'px',maxHeight:Math.max(120,Math.min(470,window.innerHeight*.49,r.height-160))+'px',transform:'translate(-50%,0)'});
+ }
 }
 function positionLayer(){
  const fullscreen=document.body.classList.contains('is-paper-fullscreen');
@@ -283,8 +301,8 @@ function measureTextHeight(o,widthPx){
   return Math.max(o.h*canvasHeight,lineCount*fontPx*1.22+fontPx*.35);
  }
  function photoCompositionLayout(){
-  // Compute each layer independently. No collision solving or vertical reflow:
-  // overlapping photos, text, stickers, and shapes are intentional composition.
+  // Keep each layer, including its rotated visual bounds, inside the paper.
+  // Items still overlap freely; only their outer bounds are constrained.
   const layout=new Map();
   items.forEach(o=>{
    const g={x:o.x,y:o.y,w:o.w,h:o.h};
@@ -295,6 +313,22 @@ function measureTextHeight(o,widthPx){
    g.h=Math.max(.012,Math.min(1,g.h));
    g.x=Math.max(0,Math.min(1-g.w,g.x));
    g.y=Math.max(0,Math.min(1-g.h,g.y));
+
+   const angle=(Number(o.rotation)||0)*Math.PI/180;
+   const ca=Math.abs(Math.cos(angle)),sa=Math.abs(Math.sin(angle));
+   let rotatedW=g.w*ca+g.h*sa;
+   let rotatedH=g.w*sa+g.h*ca;
+   // A very large rotated object must fit as a whole, not merely be clipped.
+   const scale=Math.min(1,1/Math.max(1,rotatedW),1/Math.max(1,rotatedH));
+   if(scale<1){
+    g.w*=scale;g.h*=scale;
+    rotatedW=g.w*ca+g.h*sa;
+    rotatedH=g.w*sa+g.h*ca;
+   }
+   let cx=g.x+g.w/2,cy=g.y+g.h/2;
+   cx=Math.max(rotatedW/2,Math.min(1-rotatedW/2,cx));
+   cy=Math.max(rotatedH/2,Math.min(1-rotatedH/2,cy));
+   g.x=cx-g.w/2;g.y=cy-g.h/2;
    layout.set(o.id,g);
   });
   return layout;
