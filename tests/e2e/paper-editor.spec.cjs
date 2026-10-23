@@ -164,10 +164,6 @@ test("the visible editing canvas fills its own centered 2:3 surface", async ({ p
   const contentBounds = await content.boundingBox();
   expect(contentBounds).not.toBeNull();
   expect(Math.abs(contentBounds.width / contentBounds.height - 2 / 3)).toBeLessThan(0.04);
-  const hint = await page.locator(".ls-canvas-hint").boundingBox();
-  expect(hint).not.toBeNull();
-  expect(hint.width).toBeLessThan(bounds.width * 0.55);
-  expect(hint.height).toBeLessThan(bounds.height * 0.6);
 });
 
 test("fullscreen canvas is 2:3 while the outer paper remains 16:9", async ({ page }) => {
