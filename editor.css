@@ -357,7 +357,9 @@ body.is-paper-editor-active:not(.is-paper-drawing-mode) #paper-page-content::bef
  content:"";
  position:absolute;
  z-index:0;
- inset:clamp(92px,12vh,132px) 10px clamp(150px,18vh,190px) 10px;
+ /* Use canvas-relative percentages: viewport-height insets were being scaled
+    with the embedded SVG and collapsing the visible canvas on mobile. */
+ inset:17.25% 1.25% 17.25% 1.25%;
  border-radius:28px;
  background-color:#f7f7f7;
  background-image:radial-gradient(circle,rgba(184,181,174,.62) 1.25px,transparent 1.85px);
@@ -402,19 +404,24 @@ body.is-paper-editor-active:not(.is-paper-drawing-mode) #paper-page-content::bef
 .ls-canvas-hint span:last-child { max-width:220px; color:#807a74; font-size:12px; line-height:1.45; }
 .ls-editor-shell.has-canvas-content .ls-canvas-hint,
 .ls-editor-shell.is-drawing-mode .ls-canvas-hint { display:none; }
-body.is-paper-drawing-mode #paper-page-content::before {
- content:"";
- position:absolute;
- z-index:0;
- inset:clamp(80px,11vh,160px) 8px clamp(120px,11vh,170px) 8px;
+/* The drawing background belongs to the actual paper viewport, not the
+   scaled page-content pseudo-element. The latter can collapse to a strip when
+   foreignObject scaling is applied on mobile. */
+body.is-paper-drawing-mode #paper-page-viewport {
+ overflow:hidden !important;
+ touch-action:none !important;
+ overscroll-behavior:none;
  border-radius:34px;
- background-color:#f7f7f7;
- background-image:radial-gradient(circle,rgba(190,190,190,.76) 1.45px,transparent 1.9px);
- background-size:32px 32px;
- background-position:5px 7px;
- pointer-events:none;
+ background-color:#f7f7f7 !important;
+ background-image:radial-gradient(circle,rgba(190,190,190,.76) 1.45px,transparent 1.9px) !important;
+ background-size:32px 32px !important;
+ background-position:5px 7px !important;
 }
-body.is-paper-drawing-mode #paper-page-viewport { overflow:hidden !important; touch-action:none !important; overscroll-behavior:none; border-radius:34px; background:#f7f7f7; }
+body.is-paper-drawing-mode #paper-page-content { background:transparent !important; }
+body.is-paper-drawing-mode #paper-page-content::before {
+ content:none !important;
+ display:none !important;
+}
 .ls-drawing-dock { position:fixed; z-index:2147483646; left:max(12px,env(safe-area-inset-left)); right:max(12px,env(safe-area-inset-right)); bottom:calc(0px + env(safe-area-inset-bottom)); height:132px; display:none; align-items:flex-end; justify-content:space-between; gap:12px; padding:0 0 14px; background:transparent; pointer-events:auto; }
 .ls-editor-shell.is-drawing-mode .ls-drawing-dock { display:flex; }
 .ls-draw-undo { flex:0 0 76px; display:grid; place-items:center; width:76px; height:76px; margin:0 3px 2px 0; padding:0; border:0; border-radius:25px; background:#e7e7e2; color:#858681; cursor:pointer; }
@@ -448,32 +455,8 @@ body.is-paper-drawing-mode #paper-page-viewport { overflow:hidden !important; to
 }
 
 
-/* Match the reference's inset drawing sheet: the toolbars sit in the white margins. */
-body.is-paper-drawing-mode #paper-page-viewport {
-  background: #fff !important;
-  border-radius: 0;
-}
-body.is-paper-drawing-mode #paper-page-content {
-  background: transparent !important;
-  border-radius: 0;
-  overflow: visible !important;
-  isolation: isolate;
-}
-body.is-paper-drawing-mode #paper-page-content::before {
-  content: "";
-  position: absolute;
-  z-index: 0;
-  inset: clamp(80px, 11vh, 160px) 8px clamp(120px, 11vh, 170px) 8px;
-  border-radius: 34px;
-  background-color: #f7f7f7;
-  background-image: radial-gradient(circle, rgba(190,190,190,.76) 1.45px, transparent 1.9px);
-  background-size: 32px 32px;
-  background-position: 5px 7px;
-  pointer-events: none;
-}
-body.is-paper-drawing-mode .ls-ink-layer {
-  clip-path: inset(clamp(80px, 11vh, 160px) 8px clamp(120px, 11vh, 170px) 8px round 34px);
-}
+/* Removed duplicate Draw-mode inset rules that forced the canvas viewport white
+   and clipped drawing to a narrow strip on scaled mobile paper. */
 
 
 /* Vertical brush-size slider shown at the paper's right edge while drawing. */
