@@ -570,6 +570,8 @@ body.is-paper-drawing-mode .ls-ink-layer {
   display: none !important;
 }
 .ls-editor-shell.is-drawing-mode.is-color-palette-open .ls-editor-panel.is-color-palette {
+  box-sizing: border-box;
+  margin: 0;
   left: 0;
   right: 0;
   bottom: 0;
