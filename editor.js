@@ -765,12 +765,12 @@ file.addEventListener('change',()=>{
   reader.onload=()=>{
    if(typeof reader.result!=='string')return;
    const src=reader.result,probe=new Image();
-   const insert=ratio=>{
-    const o=make('image',{src,ratio:Number(ratio)||1.5,x:.1,y:nextLayerY(),w:.8,h:.3});
+   const insert=(ratio,naturalWidth,naturalHeight)=>{
+    const o=make('image',{src,ratio:Number(ratio)||1.5,natural:{width:Math.max(1,naturalWidth||1500),height:Math.max(1,naturalHeight||1000)},x:.1,y:nextLayerY(),w:.8,h:.3});
     items.push(o);selected=o.id;draw();
    };
-   probe.onload=()=>insert(probe.naturalWidth/Math.max(1,probe.naturalHeight));
-   probe.onerror=()=>insert(1.5);
+   probe.onload=()=>insert(probe.naturalWidth/Math.max(1,probe.naturalHeight),probe.naturalWidth,probe.naturalHeight);
+   probe.onerror=()=>insert(1.5,1500,1000);
    probe.src=src;
   };
   reader.readAsDataURL(f);
@@ -800,6 +800,26 @@ function libraryAdd(name){
  if(stickers[name]){const s=stickers[name];add(make('sticker',{value:s[0],color:s[1],size:64,x:.36,y:nextLayerY(),w:.28,h:.2}));}
 }
 ui.addEventListener('click',e=>{
+ const cropAction=e.target.closest('[data-crop-action]');
+ if(cropAction){
+  const v=cropAction.dataset.cropAction;
+  if(v==='cancel')closeCropEditor();else if(v==='apply')commitCrop();else if(v==='reset')resetCrop();else if(v==='rotate-left')rotateCrop(-1);else if(v==='rotate-right')rotateCrop(1);else if(v==='undo')undoCrop();else if(v==='redo')redoCrop();
+  return;
+ }
+ const cropRatio=e.target.closest('[data-crop-ratio]');if(cropRatio){applyCropPreset(cropRatio.dataset.cropRatio);return;}
+ const layerAction=e.target.closest('[data-layer-action]');
+ if(layerAction){
+  const id=Number(layerAction.dataset.layerId),op=layerAction.dataset.layerAction,o=items.find(item=>item.id===id);
+  if(!o)return;
+  if(op==='select'){selected=id;draw();layersPanel();}
+  else if(op==='visible'){saveHistory();o.visible=o.visible===false;if(o.visible===false&&selected===id)selected=null;draw();layersPanel();}
+  else if(op==='lock'){saveHistory();o.locked=!o.locked;draw();layersPanel();}
+  else if(op==='up'){reorderLayer(id,1);layersPanel();}
+  else if(op==='down'){reorderLayer(id,-1);layersPanel();}
+  else if(op==='duplicate'){duplicateLayer(id);layersPanel();}
+  else if(op==='delete'){saveHistory();items=items.filter(item=>item.id!==id);if(selected===id)selected=null;draw();layersPanel();}
+  return;
+ }
  const brush=e.target.closest('[data-brush]');if(brush){selectedBrush=brush.dataset.brush;updateDrawingControls();return;}
  const drawAction=e.target.closest('[data-draw-action]');if(drawAction){const v=drawAction.dataset.drawAction;if(v==='undo')undoInk();else if(v==='color')chooseInkColor();return;}
  const drawColorChoice=e.target.closest('[data-draw-color]');if(drawColorChoice){drawColor=drawColorChoice.dataset.drawColor;hidePanel();updateDrawingControls();return;}
@@ -810,6 +830,7 @@ ui.addEventListener('click',e=>{
   else if(v==='undo')undo();
   else if(v==='redo') {setMoreMenu(false);redo();}
   else if(v==='more'){hidePanel();setMoreMenu(!ui.querySelector('.ls-more-menu').classList.contains('is-open'));}
+  else if(v==='layers')layersPanel();
   else if(v==='quick-add')quickAddPanel();
   else if(v==='quick-text'){hidePanel();textPanel();}
   else if(v==='quick-photo')choosePhoto(false);
@@ -824,6 +845,7 @@ ui.addEventListener('click',e=>{
  const t=e.target.closest('[data-lib-tab]');if(t){libraryPanel(t.dataset.libTab);return;}
  const item=e.target.closest('[data-lib-add]');if(item)libraryAdd(item.dataset.libAdd);
 });
+
 edit.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();openEditor();},true);
 close.addEventListener('click',()=>{editing=false;photoEditorMode=false;drawingMode=false;document.body.classList.remove('is-paper-editor-active','is-paper-drawing-mode');ui.classList.remove('is-active','is-drawing-mode');panel.classList.remove('is-open');setMoreMenu(false);layer.style.overflowY='hidden';layer.style.overscrollBehavior='none';layer.style.touchAction='none';layer.style.pointerEvents='none';draw();},true);
 // React only to actual fullscreen enter/exit transitions. This observer watches
@@ -850,7 +872,7 @@ new MutationObserver(()=>{
 }).observe(document.body,{attributes:true,attributeFilter:['class']});
 // The embedded page belongs to the paper at all times, even before fullscreen is opened.
 positionLayer();
-window.addEventListener('resize',()=>requestAnimationFrame(positionLayer));window.addEventListener('orientationchange',()=>setTimeout(positionLayer,120));
+window.addEventListener('resize',()=>{requestAnimationFrame(positionLayer);if(cropEdit)requestAnimationFrame(layoutCropEditor);});window.addEventListener('orientationchange',()=>setTimeout(()=>{positionLayer();if(cropEdit)layoutCropEditor();},120));
 window.addEventListener('scroll',()=>requestAnimationFrame(positionLayer),{passive:true});
  if(window.visualViewport){window.visualViewport.addEventListener('resize',()=>requestAnimationFrame(positionLayer));window.visualViewport.addEventListener('scroll',()=>requestAnimationFrame(positionLayer));}
 draw();histButtons();
