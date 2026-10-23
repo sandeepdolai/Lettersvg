@@ -32,8 +32,11 @@ async function openRealPaper(page) {
   const canvas = await page.locator("#paper-page-viewport").boundingBox();
   expect(paper).not.toBeNull();
   expect(canvas).not.toBeNull();
-  expect(Math.abs(paper.width / paper.height - 16 / 9)).toBeLessThan(0.04);
-  expect(Math.abs(paper.width / paper.height - canvas.width / canvas.height)).toBeGreaterThan(0.5);
+  expect(Math.abs(paper.width / paper.height - 2 / 3)).toBeLessThan(0.04);
+  expect(Math.abs(paper.width - canvas.width)).toBeLessThan(2);
+  expect(Math.abs(paper.height - canvas.height)).toBeLessThan(2);
+  expect(Math.abs(paper.x - canvas.x)).toBeLessThan(2);
+  expect(Math.abs(paper.y - canvas.y)).toBeLessThan(2);
 }
 
 async function openEditor(page) {
@@ -166,7 +169,7 @@ test("the visible editing canvas fills its own centered 2:3 surface", async ({ p
   expect(Math.abs(contentBounds.width / contentBounds.height - 2 / 3)).toBeLessThan(0.04);
 });
 
-test("fullscreen canvas is 2:3 while the outer paper remains 16:9", async ({ page }) => {
+test("fullscreen canvas and outer paper share the same 2:3 bounds", async ({ page }) => {
   await openRealPaper(page);
   const canvas = page.locator("#paper-page-viewport");
   await expect(canvas).toBeVisible();
@@ -177,6 +180,9 @@ test("fullscreen canvas is 2:3 while the outer paper remains 16:9", async ({ pag
   expect(Math.abs(bounds.width / bounds.height - 2 / 3)).toBeLessThan(0.04);
   const paper = await page.locator("#paper-surface").boundingBox();
   expect(paper).not.toBeNull();
-  expect(Math.abs(paper.width / paper.height - 16 / 9)).toBeLessThan(0.04);
-  expect(Math.abs(paper.width / paper.height - bounds.width / bounds.height)).toBeGreaterThan(0.5);
+  expect(Math.abs(paper.width / paper.height - 2 / 3)).toBeLessThan(0.04);
+  expect(Math.abs(paper.width - bounds.width)).toBeLessThan(2);
+  expect(Math.abs(paper.height - bounds.height)).toBeLessThan(2);
+  expect(Math.abs(paper.x - bounds.x)).toBeLessThan(2);
+  expect(Math.abs(paper.y - bounds.y)).toBeLessThan(2);
 });
