@@ -14,6 +14,12 @@ async function openRealPaper(page) {
   await page.locator("#paper-surface").click();
   await expect(page.locator("body")).toHaveClass(/is-paper-fullscreen/);
   await expect(page.locator("#letter-paper")).toHaveCount(1);
+  // Don't test an intermediate animation frame: wait until the real embedded
+  // canvas has reached its intended widescreen geometry on this viewport.
+  await expect.poll(async () => {
+    const canvas = await page.locator("#paper-page-viewport").boundingBox();
+    return canvas ? Math.abs(canvas.width / canvas.height - 16 / 9) : 1;
+  }, { timeout: 7_000 }).toBeLessThan(0.04);
 }
 
 async function openEditMenu(page) {
@@ -95,6 +101,29 @@ test("Add Photo imports a local image into the same paper canvas", async ({ page
     buffer: Buffer.from(svg)
   });
   await expect(page.locator("#paper-page-content .ls-object-image")).toHaveCount(1);
+  await expect(page.locator("#letter-paper")).toHaveCount(1);
+});
+
+test("Draw mode uses the bounded paper viewport and records a stroke", async ({ page }) => {
+  await openRealPaper(page);
+  const menu = await openEditMenu(page);
+  await menu.getByRole("button", { name: "Library" }).click();
+  await expect(page.locator(".ls-editor-panel")).toBeVisible();
+  await page.locator('[data-do="close-panel"]').click();
+
+  await page.locator('[data-tool="draw"]').click();
+  await expect(page.locator("body")).toHaveClass(/is-paper-drawing-mode/);
+  const viewport = page.locator("#paper-page-viewport");
+  await expect(viewport).toHaveCSS("overflow", "hidden");
+  expect(await viewport.evaluate(el => getComputedStyle(el).backgroundImage)).toContain("radial-gradient");
+
+  const canvas = await page.locator(".ls-ink-layer").boundingBox();
+  expect(canvas).not.toBeNull();
+  await page.mouse.move(canvas.x + canvas.width * 0.2, canvas.y + canvas.height * 0.5);
+  await page.mouse.down();
+  await page.mouse.move(canvas.x + canvas.width * 0.8, canvas.y + canvas.height * 0.5, { steps: 5 });
+  await page.mouse.up();
+  await expect(page.locator(".ls-ink-layer path")).toHaveCount(1);
   await expect(page.locator("#letter-paper")).toHaveCount(1);
 });
 
