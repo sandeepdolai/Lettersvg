@@ -485,6 +485,11 @@
 
       const paperSurface = document.getElementById('paper-surface');
       const letterPaper = document.getElementById('letter-paper');
+      const paperEditorForeign = document.getElementById('paper-editor-foreign');
+      if (!paperEditorForeign) throw new Error('Paper editor viewport is missing.');
+      const originalEditorForeignBounds = Object.fromEntries(
+        ['x', 'y', 'width', 'height'].map(name => [name, paperEditorForeign.getAttribute(name)])
+      );
       const letterShadow = letterPaper.querySelector('.letter-shadow');
       const originalPaperFill = paperSurface.getAttribute('fill');
       const originalPaperFilter = paperSurface.getAttribute('filter');
@@ -513,16 +518,14 @@
         fullscreenArt.setAttribute('viewBox', `0 0 ${w} ${h}`);
       }
 
-      // Keep the editor canvas at a true widescreen 16:9 ratio.
-      // Fit the canvas inside the viewport with no distortion to the target ratio:
-      // portrait phones letterbox vertically; landscape devices use available height.
-      // The existing paper node and its editor content remain a single canvas.
+      // Keep the outer paper in its existing 16:9 fullscreen frame. The inner
+      // editing canvas uses its own 2:3 geometry, centered within that paper.
       function getContainedFullscreenRect() {
         const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
         const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
-        const canvasRatio = 16 / 9;
-        const width = Math.min(viewportWidth, viewportHeight * canvasRatio);
-        const height = width / canvasRatio;
+        const paperRatio = 16 / 9;
+        const width = Math.min(viewportWidth, viewportHeight * paperRatio);
+        const height = width / paperRatio;
 
         return {
           left: (viewportWidth - width) / 2,
@@ -530,6 +533,34 @@
           width,
           height
         };
+      }
+
+      function setFullscreenCanvasRatio() {
+        // The parent paper keeps its existing 16:9 screen-space frame. Compensate
+        // for its SVG x/y scale so only the embedded editor viewport renders at 2:3.
+        const box = paperLocalBox || letterPaper.getBBox();
+        const paperRect = getContainedFullscreenRect();
+        const nativePaperRatio = box.width / Math.max(1, box.height);
+        const outerScaleRatio = (paperRect.width / paperRect.height) / nativePaperRatio;
+        const localCanvasRatio = (2 / 3) / outerScaleRatio;
+        const baseX = Number(originalEditorForeignBounds.x) || 0;
+        const baseY = Number(originalEditorForeignBounds.y) || 0;
+        const baseWidth = Number(originalEditorForeignBounds.width) || box.width;
+        const baseHeight = Number(originalEditorForeignBounds.height) || box.height;
+        const canvasHeight = Math.min(baseHeight, box.height);
+        const canvasWidth = canvasHeight * localCanvasRatio;
+
+        paperEditorForeign.setAttribute('x', String(baseX + (baseWidth - canvasWidth) / 2));
+        paperEditorForeign.setAttribute('y', String(baseY + (baseHeight - canvasHeight) / 2));
+        paperEditorForeign.setAttribute('width', String(canvasWidth));
+        paperEditorForeign.setAttribute('height', String(canvasHeight));
+      }
+
+      function restoreOriginalCanvasBounds() {
+        for (const [name, value] of Object.entries(originalEditorForeignBounds)) {
+          if (value == null) paperEditorForeign.removeAttribute(name);
+          else paperEditorForeign.setAttribute(name, value);
+        }
       }
 
       // The normal and raised positions are measured from the real SVG paper
@@ -692,6 +723,7 @@
 
         paperHomeParent = letterPaper.parentNode;
         paperHomeNextSibling = letterPaper.nextSibling;
+        setFullscreenCanvasRatio();
         isPaperFullscreen = true;
         previousBodyOverflow = document.body.style.overflow;
         document.body.style.overflow = 'hidden';
@@ -787,6 +819,8 @@
             letterPaper.style.transform = '';
             letterPaper.style.transformBox = '';
             letterPaper.style.transformOrigin = '';
+            restoreOriginalCanvasBounds();
+            window.dispatchEvent(new Event('resize'));
             fullscreenAnimating = false;
           };
           const onSettleEnd = event => {
