@@ -148,6 +148,49 @@ test("Draw mode uses the bounded paper viewport and records a stroke", async ({ 
   await expect(page.locator("#letter-paper")).toHaveCount(1);
 });
 
+test("Eraser removes existing ink instead of drawing a white layer", async ({ page }) => {
+  await openRealPaper(page);
+  await openEditor(page);
+  await page.locator('[data-tool="draw"]').click();
+  await expect(page.locator("body")).toHaveClass(/is-paper-drawing-mode/);
+
+  const ink = page.locator(".ls-ink-layer");
+  let canvas = await ink.boundingBox();
+  expect(canvas).not.toBeNull();
+  const start = { x: canvas.x + canvas.width * 0.18, y: canvas.y + canvas.height * 0.5 };
+  const end = { x: canvas.x + canvas.width * 0.82, y: canvas.y + canvas.height * 0.5 };
+  await page.mouse.move(start.x, start.y);
+  await page.mouse.down();
+  await page.mouse.move(end.x, end.y, { steps: 12 });
+  await page.mouse.up();
+
+  const visibleInk = page.locator(".ls-ink-layer > g.ls-visible-ink > path");
+  await expect(visibleInk).toHaveCount(1);
+  const originalStroke = visibleInk.first();
+  await expect(originalStroke).toHaveAttribute("stroke", "#ed1763");
+
+  await page.locator('[data-brush="eraser"]').click();
+  canvas = await ink.boundingBox();
+  expect(canvas).not.toBeNull();
+  // Cross the existing stroke with the eraser, leaving the original artwork
+  // node masked rather than adding a white-colored stroke on top of it.
+  await page.mouse.move(canvas.x + canvas.width * 0.48, canvas.y + canvas.height * 0.34);
+  await page.mouse.down();
+  await page.mouse.move(canvas.x + canvas.width * 0.52, canvas.y + canvas.height * 0.66, { steps: 10 });
+  await page.mouse.up();
+
+  await expect(visibleInk).toHaveCount(1);
+  await expect(visibleInk.first()).toHaveAttribute("mask", /url\(#lettersvg-ink-erase-mask-0\)/);
+  const maskId = await visibleInk.first().getAttribute("mask");
+  const mask = page.locator(".ls-ink-layer defs mask#" + maskId.match(/#([^)]*)/)[1]);
+  await expect(mask.locator('rect[fill="#fff"]')).toHaveCount(1);
+  await expect(mask.locator('path[stroke="#000"]')).toHaveCount(1);
+  await expect(mask.locator('path[stroke="#000"]')).toHaveAttribute("d", /L/);
+  await expect(visibleInk.first()).not.toHaveAttribute("stroke", "#f7f7f7");
+  await expect(page.locator("#letter-paper")).toHaveCount(1);
+  await expect(page.locator("#paper-page-viewport")).toBeVisible();
+});
+
 test("the visible editing canvas fills its own centered 2:3 surface", async ({ page }) => {
   await openRealPaper(page);
   await openEditor(page);
