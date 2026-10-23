@@ -529,41 +529,72 @@ function positionLayer(){
  Object.assign(layer.style,{opacity:'1',pointerEvents:(editing||photoEditorMode)?'auto':'none'});
  draw();
 }
+function clampLayerModel(o){
+ const rad=(Number(o.rotation)||0)*Math.PI/180;
+ let w=Math.max(.025,Number(o.w)||.1),h=Math.max(.025,Number(o.h)||.1);
+ const c=Math.abs(Math.cos(rad)),sn=Math.abs(Math.sin(rad));
+ const rotatedW=()=>w*canvasWidth*c+h*canvasHeight*sn;
+ const rotatedH=()=>w*canvasWidth*sn+h*canvasHeight*c;
+ const fit=Math.min(1,canvasWidth/Math.max(1,rotatedW()),canvasHeight/Math.max(1,rotatedH()));
+ if(fit<1){w*=fit;h*=fit;o.w=w;o.h=h;}
+ const rx=rotatedW()/Math.max(1,canvasWidth),ry=rotatedH()/Math.max(1,canvasHeight);
+ const cx=clamp((Number(o.x)||0)+w/2,rx/2,1-rx/2);
+ const cy=clamp((Number(o.y)||0)+h/2,ry/2,1-ry/2);
+ o.x=cx-w/2;o.y=cy-h/2;
+}
 function actionButton(op,label,title,o){
  const b=document.createElement('button');b.type='button';b.className='ls-object-action';b.dataset.op=op;b.textContent=label;b.title=title;b.setAttribute('aria-label',title);
  b.addEventListener('pointerdown',e=>e.stopPropagation());
- b.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();if(op==='delete'){saveHistory();items=items.filter(x=>x.id!==o.id);selected=null;draw();}else if(op==='rotate'){saveHistory();o.rotation=(o.rotation+15)%360;draw();}else if(op==='fit'){saveHistory();o.fit=o.fit==='cover'?'contain':'cover';draw();}});
+ b.addEventListener('click',e=>{
+  e.preventDefault();e.stopPropagation();
+  if(op==='delete'){saveHistory();items=items.filter(x=>x.id!==o.id);selected=null;draw();}
+  else if(op==='rotate'){saveHistory();o.rotation=(o.rotation+15)%360;clampLayerModel(o);draw();}
+  else if(op==='crop'){openCropEditor(o);}
+  else if(op==='fit'){saveHistory();o.fit=o.fit==='cover'?'contain':'cover';draw();}
+  else if(op==='duplicate'){duplicateLayer(o.id);}
+ });
  return b;
 }
 function startDrag(e,o,mode){
  if(!editing||(e.button!==0&&e.pointerType==='mouse'))return;
- e.preventDefault();e.stopPropagation();const r=layer.getBoundingClientRect();if(!r.width||!r.height)return;
- // Record a single undo step for either moving or resizing the selected layer.
+ e.preventDefault();e.stopPropagation();
+ if(o.locked){selected=o.id;draw();return;}
+ const r=layer.getBoundingClientRect();if(!r.width||!r.height)return;
  saveHistory();selected=o.id;
  const g=layoutGeometry.get(o.id)||o;
- drag={id:o.id,mode,sx:e.clientX,sy:e.clientY,x:g.x,y:g.y,w:g.w,h:g.h,pw:g.w*r.width,ph:g.h*r.height,rw:r.width,rh:r.height};draw();
+ const cx=r.left+(g.x+g.w/2)*r.width,cy=r.top+(g.y+g.h/2)*r.height;
+ drag={id:o.id,mode,pointerId:e.pointerId,sx:e.clientX,sy:e.clientY,x:g.x,y:g.y,w:g.w,h:g.h,rw:r.width,rh:r.height,
+  original:clone(o),centerX:cx,centerY:cy,startDistance:Math.max(1,Math.hypot(e.clientX-cx,e.clientY-cy)),
+  startAngle:Math.atan2(e.clientY-cy,e.clientX-cx),startRotation:Number(o.rotation)||0};
+ try{layer.setPointerCapture(e.pointerId);}catch(_){}
+ draw();
 }
 document.addEventListener('pointermove',e=>{
- if(!drag)return;const o=items.find(x=>x.id===drag.id);if(!o)return;const dx=e.clientX-drag.sx,dy=e.clientY-drag.sy;
+ if(!drag||e.pointerId!==drag.pointerId)return;
+ const o=items.find(x=>x.id===drag.id);if(!o)return;
+ const dx=e.clientX-drag.sx,dy=e.clientY-drag.sy;
  if(drag.mode==='move'){
-  o.x=Math.max(0,Math.min(1-drag.w,drag.x+dx/drag.rw));
-  o.y=Math.max(0,Math.min(1-drag.h,drag.y+dy/drag.rh));
+  o.x=drag.x+dx/drag.rw;o.y=drag.y+dy/drag.rh;
+ }else if(drag.mode==='rotate'){
+  const angle=Math.atan2(e.clientY-drag.centerY,e.clientX-drag.centerX);
+  o.rotation=((drag.startRotation+(angle-drag.startAngle)*180/Math.PI)%360+360)%360;
+ }else if(drag.mode==='resize'){
+  const distance=Math.hypot(e.clientX-drag.centerX,e.clientY-drag.centerY);
+  const scale=clamp(distance/drag.startDistance,.05,8);
+  o.x=drag.x+drag.w/2-(drag.w*scale)/2;
+  o.y=drag.y+drag.h/2-(drag.h*scale)/2;
+  o.w=Math.max(.035,drag.w*scale);o.h=Math.max(.025,drag.h*scale);
+  if(o.type==='text')o.size=clamp((Number(drag.original.size)||30)*scale,8,160);
  }
- else if(o.type==='image'){
-  const ratio=drag.pw/Math.max(1,drag.ph);
-  let w=Math.max(54,drag.pw+dx),h=Math.max(48,drag.ph+dy);
-  if(Math.abs(dx)>=Math.abs(dy))h=w/ratio;else w=h*ratio;
-  const maxW=Math.max(1,(1-drag.x)*drag.rw),maxH=Math.max(1,(1-drag.y)*drag.rh);
-  const fit=Math.min(1,maxW/Math.max(1,w),maxH/Math.max(1,h));
-  o.w=Math.max(.04,w*fit/drag.rw);o.h=Math.max(.04,h*fit/drag.rh);
- }
- else{
-  o.w=Math.min(1-drag.x,Math.max(.08,drag.w+dx/drag.rw));
-  o.h=Math.min(1-drag.y,Math.max(.05,drag.h+dy/drag.rh));
- }
- draw();
+ clampLayerModel(o);draw();
 });
-document.addEventListener('pointerup',()=>drag=null);document.addEventListener('pointercancel',()=>drag=null);
+function finishLayerDrag(e){
+ if(!drag||(e&&e.pointerId!==drag.pointerId))return;
+ const d=drag,o=items.find(x=>x.id===d.id);drag=null;
+ try{layer.releasePointerCapture(d.pointerId);}catch(_){}
+ if(!o||(['x','y','w','h','rotation','size'].every(k=>Number(o[k]||0)===Number(d.original[k]||0)))){undoStack.pop();histButtons();}
+}
+document.addEventListener('pointerup',finishLayerDrag);document.addEventListener('pointercancel',finishLayerDrag);
 
 function measureTextHeight(o,widthPx){
   const fontPx=Math.max(10,o.size*contentScale);
