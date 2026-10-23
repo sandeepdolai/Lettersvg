@@ -25,7 +25,14 @@ async function openRealPaper(page) {
     el.addEventListener("transitionend", finish);
     timer = window.setTimeout(() => finish(), 1_500);
   }));
-  await page.locator("#letter-paper").click();
+  const visibleSheet = page.locator("#paper-surface");
+  const sheetBounds = await visibleSheet.boundingBox();
+  expect(sheetBounds).not.toBeNull();
+  // The bottom of the sheet is intentionally behind the red envelope folds;
+  // tap the exposed upper section, where a real user can reach the paper.
+  await visibleSheet.click({
+    position: { x: sheetBounds.width * 0.5, y: sheetBounds.height * 0.32 }
+  });
   await expect(page.locator("body")).toHaveClass(/is-paper-fullscreen/);
   await expect(page.locator("#letter-paper")).toHaveCount(1);
   // Don't test an intermediate animation frame: wait until the real embedded
