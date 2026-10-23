@@ -772,3 +772,7 @@ body.is-paper-drawing-mode .ls-ink-layer {
 .ls-selection-frame .ls-object-actions { transform-origin: top right; }
 .ls-layer-actions button:focus-visible,
 .ls-crop-overlay button:focus-visible { outline: 2px solid #a92f2b; outline-offset: 2px; }
+
+/* Interactive surfaces must opt back in because the editor shell itself is click-through. */
+.ls-more-menu, .ls-more-menu button, .ls-crop-overlay { pointer-events: auto; }
+.ls-editor-shell.is-crop-mode { pointer-events: auto; }
