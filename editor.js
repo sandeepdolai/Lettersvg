@@ -7,7 +7,7 @@ letterPaper=document.getElementById('letter-paper'), paperShadow=letterPaper&&le
 if(!fs||!surface||!edit||!close||!layer||!page||!letterPaper||!paperShadow)return;
 const originalSurfaceHeight=Number(surface.getAttribute('height'))||690;
 const originalShadowHeight=Number(paperShadow.getAttribute('height'))||originalSurfaceHeight;
-let items=[],selected=null,nextId=1,editing=false,photoEditorMode=false,drawingMode=false,selectedBrush='marker',drawColor='#ed1763',brushSize=24,sizePointerId=null,strokes=[],activeStroke=null,activeStrokePath=null,activePointerId=null,tab='stickers',undoStack=[],redoStack=[],drag=null,dragFrame=null,pendingDragPoint=null,cropEdit=null,contentScale=1,canvasWidth=390,canvasHeight=844,layoutGeometry=new Map();
+let items=[],selected=null,nextId=1,editing=false,photoEditorMode=false,drawingMode=false,selectedBrush='marker',drawColor='#ed1763',brushSize=24,sizePointerId=null,strokes=[],strokeUndoStack=[],activeStroke=null,activeStrokePath=null,activePointerId=null,strokeDrag=null,strokeDragFrame=null,pendingStrokePoint=null,tab='stickers',undoStack=[],redoStack=[],drag=null,dragFrame=null,pendingDragPoint=null,cropEdit=null,contentScale=1,canvasWidth=390,canvasHeight=844,layoutGeometry=new Map();
 const ui=document.createElement('section');ui.className='ls-editor-shell';ui.setAttribute('aria-label','Photo editor');
 ui.innerHTML='<div class="ls-editor-topbar" aria-label="Editor controls"><button class="ls-icon-button ls-close-button" data-do="exit" aria-label="Close editor" title="Close editor"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5 19 19M19 5 5 19"/></svg></button><button class="ls-icon-button ls-undo-button" data-do="undo" aria-label="Undo" title="Undo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14 4 9l5-5M4 9h9a6 6 0 0 1 0 12h-2"/></svg></button><span class="ls-topbar-spacer"></span><button class="ls-icon-button ls-more-button" data-do="more" aria-label="More options" aria-expanded="false" title="More options"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg></button><button class="ls-next-button" data-do="next" disabled>Next</button></div><div class="ls-more-menu" aria-label="More options"><button data-do="layers"><span>Layers</span><span class="ls-menu-shortcut">▤</span></button><button data-do="redo"><span>Redo</span><span class="ls-menu-shortcut">↷</span></button><button data-do="library"><span>Library</span><span class="ls-menu-shortcut">✦</span></button><button data-do="layouts"><span>Premade layouts</span><span class="ls-menu-shortcut">▧</span></button></div><div class="ls-editor-panel" aria-live="polite"></div><nav class="ls-editor-dock" aria-label="Editor tools"><button class="ls-tool-button ls-wave-button" data-tool="draw" aria-label="Draw" title="Draw"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M3 23c4-8 7-13 10-13 5 0-4 18-1 18 2 0 9-17 13-17 5 0-4 19-1 19 3 0 7-8 13-15M4 31c4-5 7-7 10-7"/></svg></button><button class="ls-tool-button ls-text-button" data-tool="text" aria-label="Text" title="Text"><span class="ls-letter-a">A</span></button><button class="ls-tool-button ls-plus-button" data-do="quick-add" aria-label="Add to photo" title="Add to photo"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M20 5v30M5 20h30"/></svg></button><button class="ls-tool-button ls-photo-button" data-tool="photo" aria-label="Add photo" title="Add photo"><svg viewBox="0 0 40 40" aria-hidden="true"><rect x="3.5" y="5.5" width="33" height="29" rx="4"/><circle cx="13" cy="14" r="3"/><path d="m5 29 9-8 7 6 5-5 9 9"/></svg></button><button class="ls-tool-button ls-camera-button" data-tool="camera" aria-label="Take a photo" title="Take a photo"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M5 12h7l3-5h10l3 5h7a3 3 0 0 1 3 3v17a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3V15a3 3 0 0 1 3-3Z"/><circle cx="20" cy="23" r="8"/><circle cx="20" cy="23" r="4.5"/></svg></button></nav>';
 document.body.append(ui);
@@ -436,6 +436,7 @@ function renderInkLayer(documentHeight){
   // remains visible, matching the normal behavior of a paint-app eraser.
   if(stroke.brush==='eraser')return;
   const path=makeInkPath(stroke);
+  path.style.pointerEvents='none';
   const laterErasers=strokes.slice(index+1).filter(candidate=>candidate.brush==='eraser');
   if(laterErasers.length){
    const mask=document.createElementNS(svgNS,'mask');
@@ -462,10 +463,65 @@ function renderInkLayer(documentHeight){
    path.setAttribute('mask','url(#'+maskId+')');
   }
   clippedInk.append(path);
+  if(editing&&!drawingMode){
+   // The invisible hit path lets users grab an existing stroke to move it,
+   // without turning the entire SVG overlay into a pointer-blocking surface.
+   const hitPath=makeInkPath(stroke);
+   hitPath.setAttribute('class','ls-ink-move-target');
+   hitPath.setAttribute('data-stroke-index',String(index));
+   hitPath.setAttribute('stroke','transparent');
+   hitPath.setAttribute('stroke-width',String(Math.max(18,Number(stroke.width)||0+14)));
+   hitPath.setAttribute('pointer-events','stroke');
+   hitPath.style.pointerEvents='stroke';
+   hitPath.style.cursor='grab';
+   hitPath.style.touchAction='none';
+   clippedInk.append(hitPath);
+  }
  });
  inkLayer.append(defs,clippedInk);
- Object.assign(inkLayer.style,{pointerEvents:drawingMode?'auto':'none',touchAction:'none'});
+ Object.assign(inkLayer.style,{pointerEvents:(drawingMode||editing)?'auto':'none',touchAction:'none'});
  page.append(inkLayer);updateDrawingControls();
+}
+function startStrokeMove(e){
+ if(!editing||drawingMode||(e.button!==0&&e.pointerType==='mouse'))return;
+ const target=e.target&&e.target.closest?e.target.closest('[data-stroke-index]'):null;
+ if(!target)return;
+ const index=Number(target.getAttribute('data-stroke-index')),stroke=strokes[index];
+ if(!stroke||stroke.brush==='eraser'||!stroke.points||!stroke.points.length)return;
+ e.preventDefault();e.stopPropagation();
+ const rect=inkLayer.getBoundingClientRect();if(!rect.width||!rect.height)return;
+ if(strokeDragFrame!==null){cancelAnimationFrame(strokeDragFrame);strokeDragFrame=null;}
+ pendingStrokePoint=null;
+ strokeDrag={index,pointerId:e.pointerId,sx:e.clientX,sy:e.clientY,rw:rect.width,rh:rect.height,points:clone(stroke.points)};
+ try{inkLayer.setPointerCapture(e.pointerId);}catch(_){}
+}
+function applyStrokeMoveFrame(){
+ if(!strokeDrag||!pendingStrokePoint)return;
+ const d=strokeDrag,p=pendingStrokePoint;pendingStrokePoint=null;
+ const dx=p.x-d.sx,dy=p.y-d.sy;
+ if(dx*dx+dy*dy<1)return;
+ const stroke=strokes[d.index];if(!stroke)return;
+ stroke.points=d.points.map(point=>({x:point.x+dx/d.rw,y:point.y+dy/d.rh}));
+ renderInkLayer(Math.max(1,parseFloat(page.style.height)||canvasHeight));
+}
+function scheduleStrokeMove(e){
+ if(!strokeDrag||e.pointerId!==strokeDrag.pointerId)return;
+ e.preventDefault();pendingStrokePoint={x:e.clientX,y:e.clientY};
+ if(strokeDragFrame===null){
+  strokeDragFrame=requestAnimationFrame(()=>{strokeDragFrame=null;applyStrokeMoveFrame();});
+ }
+}
+function finishStrokeMove(e){
+ if(!strokeDrag||(e&&e.pointerId!==strokeDrag.pointerId))return;
+ if(e&&Number.isFinite(e.clientX)&&Number.isFinite(e.clientY))pendingStrokePoint={x:e.clientX,y:e.clientY};
+ if(strokeDragFrame!==null){cancelAnimationFrame(strokeDragFrame);strokeDragFrame=null;}
+ if(pendingStrokePoint)applyStrokeMoveFrame();
+ const d=strokeDrag,stroke=strokes[d.index];
+ const changed=stroke&&stroke.points.some((point,i)=>Math.abs(point.x-d.points[i].x)>0.00001||Math.abs(point.y-d.points[i].y)>0.00001);
+ if(changed)strokeUndoStack.push({type:'move',index:d.index,points:d.points});
+ strokeDrag=null;pendingStrokePoint=null;
+ try{inkLayer.releasePointerCapture(d.pointerId);}catch(_){}
+ updateDrawingControls();
 }
 function inkPointFromEvent(e){
  const rect=inkLayer.getBoundingClientRect(),docHeight=Math.max(1,parseFloat(page.style.height)||canvasHeight),sx=canvasWidth/Math.max(1,rect.width),sy=docHeight/Math.max(1,rect.height);
@@ -476,6 +532,7 @@ function startInk(e){
  const p=inkPointFromEvent(e);
  activeStroke={color:drawColor,width:Math.round((brushWidths[selectedBrush]||4)*(brushSize/24)*10)/10,brush:selectedBrush,brushSize,points:[p]};
  strokes.push(activeStroke);
+ strokeUndoStack.push({type:'add',index:strokes.length-1});
  activePointerId=e.pointerId;
  renderInkLayer(Math.max(1,parseFloat(page.style.height)||canvasHeight));
  try{inkLayer.setPointerCapture(e.pointerId);}catch(_){}
@@ -490,7 +547,17 @@ function moveInk(e){
  renderInkLayer(Math.max(1,parseFloat(page.style.height)||canvasHeight));
 }
 function finishInk(e){if(!activeStroke||(e&&e.pointerId!==activePointerId))return;activeStroke=null;activeStrokePath=null;activePointerId=null;updateDrawingControls();}
-function undoInk(){if(!strokes.length)return;strokes.pop();activeStroke=null;activeStrokePath=null;activePointerId=null;draw();}
+function undoInk(){
+ if(!strokeUndoStack.length){if(!strokes.length)return;strokes.pop();}
+ else{
+  const action=strokeUndoStack.pop();
+  if(action.type==='move'){
+   const stroke=strokes[action.index];if(stroke)stroke.points=clone(action.points);
+  }else if(action.type==='add')strokes.splice(action.index,1);
+ }
+ activeStroke=null;activeStrokePath=null;activePointerId=null;strokeDrag=null;pendingStrokePoint=null;
+ draw();
+}
 function chooseInkColor(){
  const colors=[
   ['#ed1763','Pink'],['#ff2638','Red'],['#ff6b18','Orange'],['#ffd000','Yellow'],
@@ -806,7 +873,10 @@ function measureTextHeight(o,widthPx){
   syncPaperSurfaceHeight();histButtons();
  }
 
-inkLayer.addEventListener('pointerdown',startInk);
+inkLayer.addEventListener('pointerdown',e=>{if(drawingMode)startInk(e);else startStrokeMove(e);});
+document.addEventListener('pointermove',scheduleStrokeMove,{passive:false});
+document.addEventListener('pointerup',finishStrokeMove);
+document.addEventListener('pointercancel',finishStrokeMove);
 const brushSizeControl=ui.querySelector('.ls-brush-size-control');
 if(brushSizeControl){
  brushSizeControl.addEventListener('pointerdown',startBrushSizeChange);
