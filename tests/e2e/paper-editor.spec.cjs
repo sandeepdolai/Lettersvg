@@ -126,8 +126,12 @@ test("the Library remains available through the existing More menu", async ({ pa
   const panel = await openLibrary(page);
   await expect(panel.getByRole("button", { name: "Stickers" })).toBeVisible();
   await expect(panel.getByRole("button", { name: "Elements" })).toBeVisible();
+  await expect(panel.locator(".ls-pin-grid")).toHaveAttribute("data-library-kind", "stickers");
+  await expect(panel.locator(".ls-pin-card").first().locator(".ls-pin-art")).toBeVisible();
   await panel.getByRole("button", { name: "Layouts" }).click();
   await expect(panel.locator('[data-lib-add="love-note"]')).toBeVisible();
+  await expect(panel.locator('[data-lib-add="love-note"]')).toHaveClass(/ls-pin-layout/);
+  await expect(panel.locator(".ls-pin-grid")).toHaveCSS("column-count", "2");
 });
 
 test("Draw mode uses the bounded paper viewport and records a stroke", async ({ page }) => {
