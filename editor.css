@@ -945,3 +945,64 @@ body.is-paper-drawing-mode #paper-page-content::before {
 @media(prefers-reduced-motion:reduce) {
   .ls-pin-grid .ls-pin-card, .ls-pin-grid .ls-pin-layout, .ls-pin-add { transition:none!important; }
 }
+
+
+/* Paper Stish Smart Edit-style transform handles:
+   large touch targets at every corner, with the layer kept proportional. */
+.ls-selection-frame .ls-resize-handle {
+  position:absolute!important;
+  display:grid!important;
+  place-items:center!important;
+  box-sizing:border-box;
+  width:36px!important;
+  height:36px!important;
+  min-width:36px!important;
+  min-height:36px!important;
+  padding:0!important;
+  border:0!important;
+  border-radius:50%!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  z-index:6;
+  pointer-events:auto!important;
+  touch-action:none;
+  -webkit-tap-highlight-color:transparent;
+}
+.ls-selection-frame .ls-resize-handle::before {
+  content:"";
+  display:block;
+  width:14px;
+  height:14px;
+  box-sizing:border-box;
+  border:1.5px solid #181818;
+  border-radius:50%;
+  background:#fff;
+  box-shadow:0 1px 4px rgba(0,0,0,.25);
+  transition:transform 120ms ease,background-color 120ms ease;
+}
+.ls-selection-frame .ls-resize-handle:active::before {
+  transform:scale(1.18);
+  background:#f2e8e6;
+}
+.ls-selection-frame .ls-resize-nw {
+  left:0!important;top:0!important;right:auto!important;bottom:auto!important;
+  transform:translate(-50%,-50%);cursor:nwse-resize;
+}
+.ls-selection-frame .ls-resize-ne {
+  right:0!important;top:0!important;left:auto!important;bottom:auto!important;
+  transform:translate(50%,-50%);cursor:nesw-resize;
+}
+.ls-selection-frame .ls-resize-sw {
+  left:0!important;bottom:0!important;right:auto!important;top:auto!important;
+  transform:translate(-50%,50%);cursor:nesw-resize;
+}
+.ls-selection-frame .ls-resize-se {
+  right:0!important;bottom:0!important;left:auto!important;top:auto!important;
+  transform:translate(50%,50%);cursor:nwse-resize;
+}
+.ls-selection-frame .ls-resize-handle:focus-visible {
+  outline:2px solid #a92f2b!important;outline-offset:1px;
+}
+@media(prefers-reduced-motion:reduce) {
+  .ls-selection-frame .ls-resize-handle::before { transition:none!important; }
+}
