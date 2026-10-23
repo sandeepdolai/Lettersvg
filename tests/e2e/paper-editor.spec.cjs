@@ -152,6 +152,51 @@ test("Draw mode uses the bounded paper viewport and records a stroke", async ({ 
   await expect(page.locator("#letter-paper")).toHaveCount(1);
 });
 
+test("Move and resize match Smart Edit corner-handle behavior", async ({ page }) => {
+  await openRealPaper(page);
+  await openEditor(page);
+  await page.locator('[data-tool="text"]').click();
+  await page.locator(".ls-text-input").fill("Move and size me");
+  await page.locator('[data-do="apply-text"]').click();
+
+  const object = page.locator(".ls-object-text").first();
+  const frame = page.locator(".ls-selection-frame");
+  await expect(frame).toBeVisible();
+  const handles = frame.locator(".ls-resize-handle");
+  await expect(handles).toHaveCount(4);
+  for (const corner of ["nw", "ne", "sw", "se"]) {
+    await expect(frame.locator('[data-resize-corner="' + corner + '"]')).toBeVisible();
+  }
+
+  const beforeMove = await frame.boundingBox();
+  const objectBox = await object.boundingBox();
+  expect(beforeMove).not.toBeNull();
+  expect(objectBox).not.toBeNull();
+  await page.mouse.move(objectBox.x + objectBox.width / 2, objectBox.y + objectBox.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(objectBox.x + objectBox.width / 2 + 24, objectBox.y + objectBox.height / 2 + 18, { steps: 4 });
+  await page.mouse.up();
+  await expect.poll(async () => {
+    const b = await frame.boundingBox();
+    return b ? Math.abs(b.x - beforeMove.x) + Math.abs(b.y - beforeMove.y) : 0;
+  }).toBeGreaterThan(8);
+
+  const beforeResize = await frame.boundingBox();
+  const grip = await frame.locator('[data-resize-corner="se"]').boundingBox();
+  expect(beforeResize).not.toBeNull();
+  expect(grip).not.toBeNull();
+  await page.mouse.move(grip.x + grip.width / 2, grip.y + grip.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(grip.x + grip.width / 2 + 22, grip.y + grip.height / 2 + 22, { steps: 4 });
+  await page.mouse.up();
+  await expect.poll(async () => {
+    const b = await frame.boundingBox();
+    return b ? b.width : 0;
+  }).toBeGreaterThan(beforeResize.width + 5);
+  await expect(page.locator("#letter-paper")).toHaveCount(1);
+  await expect(page.locator("#paper-page-viewport")).toBeVisible();
+});
+
 test("Eraser removes existing ink instead of drawing a white layer", async ({ page }) => {
   await openRealPaper(page);
   await openEditor(page);
