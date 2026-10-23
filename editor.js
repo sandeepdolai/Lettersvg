@@ -7,7 +7,7 @@ letterPaper=document.getElementById('letter-paper'), paperShadow=letterPaper&&le
 if(!fs||!surface||!edit||!close||!layer||!page||!letterPaper||!paperShadow)return;
 const originalSurfaceHeight=Number(surface.getAttribute('height'))||690;
 const originalShadowHeight=Number(paperShadow.getAttribute('height'))||originalSurfaceHeight;
-let items=[],selected=null,nextId=1,editing=false,photoEditorMode=false,drawingMode=false,selectedBrush='marker',drawColor='#ed1763',brushSize=24,sizePointerId=null,strokes=[],activeStroke=null,activeStrokePath=null,activePointerId=null,tab='stickers',undoStack=[],redoStack=[],drag=null,cropEdit=null,contentScale=1,canvasWidth=390,canvasHeight=844,layoutGeometry=new Map();
+let items=[],selected=null,nextId=1,editing=false,photoEditorMode=false,drawingMode=false,selectedBrush='marker',drawColor='#ed1763',brushSize=24,sizePointerId=null,strokes=[],activeStroke=null,activeStrokePath=null,activePointerId=null,tab='stickers',undoStack=[],redoStack=[],drag=null,dragFrame=null,pendingDragPoint=null,cropEdit=null,contentScale=1,canvasWidth=390,canvasHeight=844,layoutGeometry=new Map();
 const ui=document.createElement('section');ui.className='ls-editor-shell';ui.setAttribute('aria-label','Photo editor');
 ui.innerHTML='<div class="ls-editor-topbar" aria-label="Editor controls"><button class="ls-icon-button ls-close-button" data-do="exit" aria-label="Close editor" title="Close editor"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5 19 19M19 5 5 19"/></svg></button><button class="ls-icon-button ls-undo-button" data-do="undo" aria-label="Undo" title="Undo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14 4 9l5-5M4 9h9a6 6 0 0 1 0 12h-2"/></svg></button><span class="ls-topbar-spacer"></span><button class="ls-icon-button ls-more-button" data-do="more" aria-label="More options" aria-expanded="false" title="More options"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg></button><button class="ls-next-button" data-do="next" disabled>Next</button></div><div class="ls-more-menu" aria-label="More options"><button data-do="layers"><span>Layers</span><span class="ls-menu-shortcut">▤</span></button><button data-do="redo"><span>Redo</span><span class="ls-menu-shortcut">↷</span></button><button data-do="library"><span>Library</span><span class="ls-menu-shortcut">✦</span></button><button data-do="layouts"><span>Premade layouts</span><span class="ls-menu-shortcut">▧</span></button></div><div class="ls-editor-panel" aria-live="polite"></div><nav class="ls-editor-dock" aria-label="Editor tools"><button class="ls-tool-button ls-wave-button" data-tool="draw" aria-label="Draw" title="Draw"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M3 23c4-8 7-13 10-13 5 0-4 18-1 18 2 0 9-17 13-17 5 0-4 19-1 19 3 0 7-8 13-15M4 31c4-5 7-7 10-7"/></svg></button><button class="ls-tool-button ls-text-button" data-tool="text" aria-label="Text" title="Text"><span class="ls-letter-a">A</span></button><button class="ls-tool-button ls-plus-button" data-do="quick-add" aria-label="Add to photo" title="Add to photo"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M20 5v30M5 20h30"/></svg></button><button class="ls-tool-button ls-photo-button" data-tool="photo" aria-label="Add photo" title="Add photo"><svg viewBox="0 0 40 40" aria-hidden="true"><rect x="3.5" y="5.5" width="33" height="29" rx="4"/><circle cx="13" cy="14" r="3"/><path d="m5 29 9-8 7 6 5-5 9 9"/></svg></button><button class="ls-tool-button ls-camera-button" data-tool="camera" aria-label="Take a photo" title="Take a photo"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M5 12h7l3-5h10l3 5h7a3 3 0 0 1 3 3v17a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3V15a3 3 0 0 1 3-3Z"/><circle cx="20" cy="23" r="8"/><circle cx="20" cy="23" r="4.5"/></svg></button></nav>';
 document.body.append(ui);
@@ -635,6 +635,8 @@ function startDrag(e,o,mode){
  e.preventDefault();e.stopPropagation();
  if(o.locked){selected=o.id;draw();return;}
  const r=layer.getBoundingClientRect();if(!r.width||!r.height)return;
+ if(dragFrame!==null){cancelAnimationFrame(dragFrame);dragFrame=null;}
+ pendingDragPoint=null;
  saveHistory();selected=o.id;
  const g=layoutGeometry.get(o.id)||o;
  const cx=r.left+(g.x+g.w/2)*r.width,cy=r.top+(g.y+g.h/2)*r.height;
@@ -644,33 +646,51 @@ function startDrag(e,o,mode){
  try{layer.setPointerCapture(e.pointerId);}catch(_){}
  draw();
 }
-document.addEventListener('pointermove',e=>{
- if(!drag||e.pointerId!==drag.pointerId)return;
- const o=items.find(x=>x.id===drag.id);if(!o)return;
- const dx=e.clientX-drag.sx,dy=e.clientY-drag.sy;
- if(drag.mode==='move'){
-  o.x=drag.x+dx/drag.rw;o.y=drag.y+dy/drag.rh;
- }else if(drag.mode==='rotate'){
-  const angle=Math.atan2(e.clientY-drag.centerY,e.clientX-drag.centerX);
-  o.rotation=((drag.startRotation+(angle-drag.startAngle)*180/Math.PI)%360+360)%360;
- }else if(drag.mode==='resize'){
-  const distance=Math.hypot(e.clientX-drag.centerX,e.clientY-drag.centerY);
-  const scale=clamp(distance/drag.startDistance,.05,8);
-  o.x=drag.x+drag.w/2-(drag.w*scale)/2;
-  o.y=drag.y+drag.h/2-(drag.h*scale)/2;
-  o.w=Math.max(.035,drag.w*scale);o.h=Math.max(.025,drag.h*scale);
-  if(o.type==='text')o.size=clamp((Number(drag.original.size)||30)*scale,8,160);
+function applyLayerDragFrame(){
+ if(!drag||!pendingDragPoint)return;
+ const d=drag,p=pendingDragPoint;pendingDragPoint=null;
+ const o=items.find(x=>x.id===d.id);if(!o)return;
+ const dx=p.x-d.sx,dy=p.y-d.sy;
+ if(d.mode==='move'){
+  o.x=d.x+dx/d.rw;o.y=d.y+dy/d.rh;
+ }else if(d.mode==='rotate'){
+  const angle=Math.atan2(p.y-d.centerY,p.x-d.centerX);
+  o.rotation=((d.startRotation+(angle-d.startAngle)*180/Math.PI)%360+360)%360;
+ }else if(d.mode==='resize'){
+  // Proportional resizing around the layer centre, measured in screen pixels
+  // so mouse, pen and touch input follow the same transform math.
+  const distance=Math.hypot(p.x-d.centerX,p.y-d.centerY);
+  const scale=clamp(distance/d.startDistance,.05,8);
+  o.x=d.x+d.w/2-(d.w*scale)/2;
+  o.y=d.y+d.h/2-(d.h*scale)/2;
+  o.w=Math.max(.035,d.w*scale);o.h=Math.max(.025,d.h*scale);
+  if(o.type==='text')o.size=clamp((Number(d.original.size)||30)*scale,8,160);
  }
  clampLayerModel(o);draw();
-});
+}
+function scheduleLayerDrag(e){
+ if(!drag||e.pointerId!==drag.pointerId)return;
+ e.preventDefault();
+ pendingDragPoint={x:e.clientX,y:e.clientY};
+ if(dragFrame===null){
+  dragFrame=requestAnimationFrame(()=>{
+   dragFrame=null;
+   applyLayerDragFrame();
+  });
+ }
+}
+document.addEventListener('pointermove',scheduleLayerDrag,{passive:false});
 function finishLayerDrag(e){
  if(!drag||(e&&e.pointerId!==drag.pointerId))return;
- const d=drag,o=items.find(x=>x.id===d.id);drag=null;
+ if(e&&Number.isFinite(e.clientX)&&Number.isFinite(e.clientY))pendingDragPoint={x:e.clientX,y:e.clientY};
+ if(dragFrame!==null){cancelAnimationFrame(dragFrame);dragFrame=null;}
+ if(pendingDragPoint)applyLayerDragFrame();
+ const d=drag,o=items.find(x=>x.id===d.id);drag=null;pendingDragPoint=null;
  try{layer.releasePointerCapture(d.pointerId);}catch(_){}
  if(!o||(['x','y','w','h','rotation','size'].every(k=>Number(o[k]||0)===Number(d.original[k]||0)))){undoStack.pop();histButtons();}
 }
-document.addEventListener('pointerup',finishLayerDrag);document.addEventListener('pointercancel',finishLayerDrag);
-
+document.addEventListener('pointerup',finishLayerDrag);
+document.addEventListener('pointercancel',finishLayerDrag);
 function measureTextHeight(o,widthPx){
   const fontPx=Math.max(10,o.size*contentScale);
   const availableWidth=Math.max(24,widthPx-8);
@@ -743,8 +763,20 @@ function measureTextHeight(o,widthPx){
   const rotate=document.createElement('button');rotate.type='button';rotate.className='ls-rotate-handle';rotate.setAttribute('aria-label','Rotate selected layer by dragging');rotate.title='Drag to rotate';
   rotate.addEventListener('pointerdown',e=>startDrag(e,o,'rotate'));rotate.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();});
   frame.append(rotate);
-  const grip=document.createElement('button');grip.type='button';grip.className='ls-resize-handle';grip.setAttribute('aria-label','Resize selected layer');grip.addEventListener('pointerdown',e=>startDrag(e,o,'resize'));grip.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();});
-  frame.append(grip);page.append(frame);
+  [
+   ['nw','top left'],['ne','top right'],['sw','bottom left'],['se','bottom right']
+  ].forEach(([corner,label])=>{
+   const grip=document.createElement('button');
+   grip.type='button';
+   grip.className='ls-resize-handle ls-resize-'+corner;
+   grip.dataset.resizeCorner=corner;
+   grip.setAttribute('aria-label','Resize selected layer from '+label);
+   grip.title='Resize';
+   grip.addEventListener('pointerdown',e=>startDrag(e,o,'resize'));
+   grip.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();});
+   frame.append(grip);
+  });
+  page.append(frame);
  }
  function draw(){
   layoutGeometry=photoCompositionLayout();
