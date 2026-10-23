@@ -115,7 +115,7 @@ function renderInkLayer(documentHeight){
  clip.setAttribute('clipPathUnits','userSpaceOnUse');
  const rect=document.createElementNS(svgNS,'rect');
  rect.setAttribute('x','0');rect.setAttribute('y','0');
- rect.setAttribute('width',String(inkWidth));rect.setAttribute('height',String(inkHeight));
+ rect.setAttribute('width',String(inkWidth));rect.setAttribute('height',String(inkHeight));rect.setAttribute('rx','34');rect.setAttribute('ry','34');
  clip.append(rect);inkLayer.append(clip);
 
  const clippedInk=document.createElementNS(svgNS,'g');
@@ -188,9 +188,9 @@ function syncEditorChromeToCanvas(){
  const slider=ui.querySelector('.ls-brush-size-control');
  const hint=ui.querySelector('.ls-canvas-hint');
 
- if(topbar)Object.assign(topbar.style,{position:'absolute',top:'10px',left:'12px',right:'12px',bottom:'auto',width:'auto'});
+ if(topbar)Object.assign(topbar.style,{position:'absolute',top:'16px',left:'20px',right:'16px',bottom:'auto',width:'auto'});
  if(dock)Object.assign(dock.style,{position:'absolute',left:'50%',right:'auto',bottom:'12px',width:Math.max(0,Math.min(420,r.width-24))+'px',transform:'translateX(-50%)'});
- if(drawingDock)Object.assign(drawingDock.style,{position:'absolute',left:'12px',right:'12px',bottom:'4px',height:Math.min(132,Math.max(82,r.height*.18))+'px'});
+ if(drawingDock)Object.assign(drawingDock.style,{position:'absolute',left:'12px',right:'12px',bottom:'12px',height:Math.min(132,Math.max(82,r.height*.18))+'px'});
  if(slider){
   const sliderHeight=Math.min(300,Math.max(120,r.height*.42));
   Object.assign(slider.style,{position:'absolute',top:Math.min(Math.max(88,r.height*.3),Math.max(76,r.height-sliderHeight-78))+'px',right:'30px',bottom:'auto',height:sliderHeight+'px'});
